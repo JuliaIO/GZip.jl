@@ -33,4 +33,5 @@ close(fh)
 ```
 
 
-See the documentation for additional information.
+See the [documentation at ReadTheDocs](https://gzipjl.readthedocs.org/en/latest/) 
+for additional information.
