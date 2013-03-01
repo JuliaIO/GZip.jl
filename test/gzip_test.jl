@@ -1,6 +1,7 @@
 # Testing for gzip
 
 using GZip
+using Test
 
 ##########################
 # test_context("GZip tests")
@@ -10,8 +11,8 @@ using GZip
 
 tmp = mktempdir()
 
-test_infile = "$JULIA_HOME/../share/julia/extras/gzip.jl"
-test_compressed = "$tmp/gzip.jl.gz"
+test_infile = "$JULIA_HOME/../share/julia/helpdb.jl"
+test_compressed = "$tmp/helpdb.jl.gz"
 
 @windows_only gunzip="gunzip.exe"
 @unix_only    gunzip="gunzip"
@@ -30,7 +31,7 @@ end
 data = open(readall, test_infile);
 
 gzfile = gzopen(test_compressed, "wb")
-@test write(gzfile, data) == length(data)
+@test write(gzfile, data) == length(data.data)
 @test close(gzfile) == Z_OK
 @test close(gzfile) != Z_OK
 
@@ -68,7 +69,7 @@ close(raw_file)
 # test_group("gzip file function tests (writing)")
 ##########################
 gzfile = gzopen(test_compressed, "wb")
-write(gzfile, data) == length(data)
+write(gzfile, data) == length(data.data)
 @test flush(gzfile) == Z_OK
 
 pos = position(gzfile)
@@ -100,7 +101,7 @@ for ch in modes
     end
     for level = 0:9
         gzfile = gzopen(test_compressed, "wb$level$ch")
-        @test write(gzfile, data) == length(data)
+        @test write(gzfile, data) == length(data.data)
         @test close(gzfile) == Z_OK
 
         file_size = filesize(test_compressed)
@@ -108,13 +109,13 @@ for ch in modes
         #println("wb$level$ch: ", file_size)
 
         if ch == 'T'
-            @test(file_size == length(data))
+            @test(file_size == length(data.data))
         elseif ch == 'F'
-            @test(file_size >= length(data))
+            @test(file_size >= length(data.data))
         elseif level == 0
-            @test(file_size > length(data))
+            @test(file_size > length(data.data))
         else
-            @test(file_size < length(data))
+            @test(file_size < length(data.data))
         end
 
         # readline test
