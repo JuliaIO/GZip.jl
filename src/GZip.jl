@@ -238,7 +238,7 @@ function gzopen(fname::String, gzmode::String, gz_buf_size::Integer)
             gz_buf_size = Z_DEFAULT_BUFSIZE
         end
     end
-    return GZipStream("<file $fname>", gz_file, gz_buf_size)
+    return GZipStream(fname, gz_file, gz_buf_size)
 end
 gzopen(fname::String, gzmode::String) = gzopen(fname, gzmode, Z_DEFAULT_BUFSIZE)
 gzopen(fname::String) = gzopen(fname, "rb", Z_DEFAULT_BUFSIZE)
