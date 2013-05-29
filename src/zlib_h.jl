@@ -1,6 +1,7 @@
 # general zlib constants, definitions
 
-const _zlib = "libz"
+@unix_only    const _zlib = "libz"
+@windows_only const _zlib = "zlib1"
 
 # Constants
 

@@ -1,7 +1,7 @@
 # Testing for gzip
 
 using GZip
-using Test
+using Base.Test
 
 ##########################
 # test_context("GZip tests")
@@ -79,9 +79,9 @@ pos = position(gzfile)
 @test position(gzfile) == pos + 100
 
 #@test throws_exception(truncate(gzfile, 100), ErrorException)
-#@test throws_exception(seek_end(gzfile), ErrorException)
+#@test throws_exception(seekend(gzfile), ErrorException)
 @test_fails truncate(gzfile, 100)
-@test_fails seek_end(gzfile)
+@test_fails seekend(gzfile)
 
 @test close(gzfile) == Z_OK
 
