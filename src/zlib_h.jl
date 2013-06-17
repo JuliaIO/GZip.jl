@@ -79,7 +79,7 @@ const SEEK_CUR = int32(1)
 # Get compile-time option flags
 zlib_compile_flags = ccall((:zlibCompileFlags, _zlib), Uint, ())
 
-let _zlib_h = dlopen("libz")
+let _zlib_h = dlopen(_zlib)
     global ZFileOffset
 
     z_off_t_sz   = 2 << ((zlib_compile_flags >> 6) & uint(3))

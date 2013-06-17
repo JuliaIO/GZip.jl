@@ -187,7 +187,7 @@ gzread(s::GZipStream, p::Ptr, len::Integer) =
     @test_gzerror(s, ccall((:gzread, _zlib), Int32, (Ptr{Void}, Ptr{Void}, Uint32),
                            s.gz_file, p, len),                          -1)
 
-let _zlib_h = dlopen("libz")
+let _zlib_h = dlopen(_zlib)
     global gzbuffer, _gzopen, _gzseek, _gztell
 
     # Doesn't exist in zlib 1.2.3 or earlier
