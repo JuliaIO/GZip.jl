@@ -333,9 +333,13 @@ position(s::GZipStream) =
 eof(s::GZipStream) = bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
 
 function peek(s::GZipStream)
-    c = gzgetc(s)
-    gzungetc(c, s)
-    uint8(c)
+    if !eof(s)
+        c = gzgetc(s)
+        gzungetc(c, s)
+        return uint8(c)
+    else
+        return 0x00
+    end
 end
 
 function check_eof(s::GZipStream)
