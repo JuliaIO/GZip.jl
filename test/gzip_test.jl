@@ -30,6 +30,8 @@ end
 
 data = open(readall, test_infile);
 
+first_char = data[1]
+
 gzfile = gzopen(test_compressed, "wb")
 @test write(gzfile, data) == length(data.data)
 @test close(gzfile) == Z_OK
@@ -54,6 +56,10 @@ close(gzfile)
 close(raw_file)
 @test data == data4
 
+# Test peek
+gzfile = gzopen(test_compressed, "r")
+@test peek(gzfile) == first_char
+close(gzfile)
 
 # Screw up the file
 raw_file = open(test_compressed, "r+")

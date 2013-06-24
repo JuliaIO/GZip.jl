@@ -2,9 +2,9 @@
 
 module GZip
 
-import Base.show, Base.fd, Base.close, Base.flush, Base.truncate, Base.seek
-import Base.skip, Base.position, Base.eof, Base.read, Base.readall
-import Base.readuntil, Base.readline, Base.write
+import Base: show, fd, close, flush, truncate, seek,
+             skip, position, eof, read, readall,
+             readuntil, readline, write, peek
 
 export
   GZipStream,
@@ -27,6 +27,7 @@ export
   readuntil,
   readline,
   write,
+  peek,
 
 # lower-level io functions
   gzgetc,
@@ -163,6 +164,8 @@ end
 # Easy access to gz reading/writing functions (Internal)
 gzgetc(s::GZipStream) =
     @test_eof_gzerr(s, ccall((:gzgetc, _zlib), Int32, (Ptr{Void},), s.gz_file), -1)
+
+gzgetc_raw(s::GZipStream) = ccall((:gzgetc, _zlib), Int32, (Ptr{Void},), s.gz_file)
 
 gzungetc(c::Integer, s::GZipStream) =
     @test_eof_gzerr(s, ccall((:gzungetc, _zlib), Int32, (Int32, Ptr{Void}), c, s.gz_file), -1)
@@ -329,15 +332,17 @@ position(s::GZipStream) =
 
 eof(s::GZipStream) = bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
 
+function peek(s::GZipStream)
+    c = gzgetc(s)
+    gzungetc(c, s)
+    uint8(c)
+end
+
 function check_eof(s::GZipStream)
     # Force eof to be set...
-    try
-        c = gzgetc(s)
+    c = gzgetc_raw(s)
+    if c != -1
         gzungetc(c, s)
-    catch e
-        if !isa(e, EOFError)
-            throw(e)
-        end
     end
 end
 
@@ -370,7 +375,6 @@ end
 
 # For this function, it's really unfortunate that zlib is
 # not integrated with ios
-# TODO: are we coping the buffer on return?  If so, figure out how not to.
 function readall(s::GZipStream, bufsize::Int)
     buf = Array(Uint8, bufsize)
     len = 0
@@ -402,7 +406,7 @@ function readall(s::GZipStream, bufsize::Int)
 end
 readall(s::GZipStream) = readall(s, Z_BIG_BUFSIZE)
 
-# TODO: Create a c-wrapper based on gzreadline
+
 function readuntil(s::GZipStream, c::Uint8)
     buf = Array(Uint8, GZ_LINE_BUFSIZE)
     pos = 1
