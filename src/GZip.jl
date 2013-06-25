@@ -341,20 +341,23 @@ function peek(s::GZipStream)
 end
 
 # Mimics read(s::IOStream, a::Array{T})
-function read{T<:Union(Int8,Uint8,Int16,Uint16,Int32,Uint32,Int64,Uint64,
-                       Int128,Uint128,Float32,Float64,Complex64,Complex128)}(s::GZipStream, a::Array{T})
-    nb = length(a)*sizeof(T)
-    # Note: this will overflow and succeed without warning if nb > 4GB
-    ret = ccall((:gzread, _zlib), Int32,
-                (Ptr{Void}, Ptr{Void}, Uint32), s.gz_file, a, nb)
-    if ret == -1
-        throw(GZError(s))
+function read{T}(s::GZipStream, a::Array{T})
+    if isbits(T)
+        nb = length(a)*sizeof(T)
+        # Note: this will overflow and succeed without warning if nb > 4GB
+        ret = ccall((:gzread, _zlib), Int32,
+                    (Ptr{Void}, Ptr{Void}, Uint32), s.gz_file, a, nb)
+        if ret == -1
+            throw(GZError(s))
+        end
+        if ret < nb
+            throw(EOFError())  # TODO: Do we have/need a way to read without throwing an error near the end of the file?
+        end
+        peek(s) # force eof to be set
+        a
+    else
+        invoke(read, (IO, Array), s, a)
     end
-    if ret < nb
-        throw(EOFError())  # TODO: Do we have/need a way to read without throwing an error near the end of the file?
-    end
-    peek(s) # force eof to be set
-    a
 end
 
 function read(s::GZipStream, ::Type{Uint8})
@@ -400,7 +403,6 @@ function readall(s::GZipStream, bufsize::Int)
 end
 readall(s::GZipStream) = readall(s, Z_BIG_BUFSIZE)
 
-
 function readuntil(s::GZipStream, c::Uint8)
     buf = Array(Uint8, GZ_LINE_BUFSIZE)
     pos = 1
@@ -413,11 +415,11 @@ function readuntil(s::GZipStream, c::Uint8)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
         eos = search(buf, '\0', pos)
         if eos == 1 || buf[eos-1] == c
-            return buf[1:eos-1]
+            return resize!(buf, eos-1)
         end
 
         # If we're at the end of the file, return the string
-        if eof(s)  return buf[1:eos-1]  end
+        if eof(s)  return resize!(buf, eos-1)  end
 
         # Otherwise, append to the end of the previous buffer
 
@@ -429,8 +431,7 @@ function readuntil(s::GZipStream, c::Uint8)
         # Read in the next chunk
         if gzgets(s, pointer(buf)+pos-1, GZ_LINE_BUFSIZE) == C_NULL
             # eof(s); remove extra buffer space
-            resize!(buf, -GZ_LINE_BUFSIZE+length(buf))
-            return buf
+            return resize!(buf, length(buf)-add_len)
         end
     end
 end
