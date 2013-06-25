@@ -41,6 +41,7 @@ following :class:`IO`/:class:`IOStream` functions are supported:
  * :func:`readuntil()`
  * :func:`readline()`
  * :func:`write()`
+ * :func:`peek()`
 
 Due to limitations in ``zlib``, :func:`seek_end` and :func:`truncate` are not available.
 
