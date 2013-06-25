@@ -333,17 +333,11 @@ position(s::GZipStream) =
 eof(s::GZipStream) = bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
 
 function peek(s::GZipStream)
-    c = gzgetc(s)
-    gzungetc(c, s)
-    uint8(c)
-end
-
-function check_eof(s::GZipStream)
-    # Force eof to be set...
     c = gzgetc_raw(s)
     if c != -1
         gzungetc(c, s)
     end
+    c
 end
 
 # Mimics read(s::IOStream, a::Array{T})
@@ -359,7 +353,7 @@ function read{T<:Union(Int8,Uint8,Int16,Uint16,Int32,Uint32,Int64,Uint64,
     if ret < nb
         throw(EOFError())  # TODO: Do we have/need a way to read without throwing an error near the end of the file?
     end
-    check_eof(s)
+    peek(s) # force eof to be set
     a
 end
 
@@ -368,7 +362,7 @@ function read(s::GZipStream, ::Type{Uint8})
     if ret == -1
         throw(GZError(s))
     end
-    check_eof(s)
+    peek(s) # force eof to be set
     uint8(ret)
 end
 

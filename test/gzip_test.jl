@@ -19,7 +19,7 @@ test_compressed = "$tmp/helpdb.jl.gz"
 
 test_gunzip = true
 try
-    run(`which $gunzip` > SpawnNullStream())
+    run(`which $gunzip` |> SpawnNullStream())
 catch
     test_gunzip = false
 end
@@ -59,6 +59,8 @@ close(raw_file)
 # Test peek
 gzfile = gzopen(test_compressed, "r")
 @test peek(gzfile) == first_char
+readall(gzfile)
+@test peek(gzfile) == -1
 close(gzfile)
 
 # Screw up the file
@@ -126,7 +128,7 @@ for ch in modes
 
         # readline test
         gzf = gzopen(test_compressed)
-        s = memio()
+        s = IOBuffer()
         while !eof(gzf)
             write(s, readline(gzf))
         end
@@ -228,9 +230,9 @@ unicode_gz_file = "$tmp/unicode_test.gz"
 UTF32BE_path = joinpath(tmp,"UTF32BE.unicode")
 UTF32LE_path = joinpath(tmp,"UTF32LE.unicode")
 UTF8_path = joinpath(tmp,"UTF8.unicode")
-run(`perl -e 'print pack "N*", 0xfeff, 0..0xd7ff, 0xe000..0x10ffff' ` > UTF32BE_path)
-run(`iconv -f UTF-32BE -t UTF-32LE $UTF32BE_path` > UTF32LE_path)
-run(`iconv -f UTF-32BE -t UTF-8 $UTF32BE_path` > UTF8_path)
+run(`perl -e 'print pack "N*", 0xfeff, 0..0xd7ff, 0xe000..0x10ffff' ` |> UTF32BE_path)
+run(`iconv -f UTF-32BE -t UTF-32LE $UTF32BE_path` |> UTF32LE_path)
+run(`iconv -f UTF-32BE -t UTF-8 $UTF32BE_path` |> UTF8_path)
 
 str1 = CharString(reinterpret(Char, read(open(UTF32LE_path), Uint32, 1112065)[2:]));
 str2 = UTF8String(read(open(UTF8_path), Uint8, 4382595)[4:]);
