@@ -227,7 +227,7 @@ function gzopen(fname::String, gzmode::String, gz_buf_size::Integer)
     # '+' is also not allowed
 
     # For windows, force binary mode; doesn't hurt on unix
-    if !contains(gzmode, 'b')
+    if !('b' in gzmode)
         gzmode *= "b"
     end
 
@@ -258,7 +258,7 @@ function gzopen(f::Function, args...)
 end
 
 function gzdopen(name::String, fd::Integer, gzmode::String, gz_buf_size::Integer)
-    if !contains(gzmode, 'b')
+    if !('b' in gzmode)
         gzmode *= "b"
     end
 
