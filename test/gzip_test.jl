@@ -13,13 +13,14 @@ tmp = mktempdir()
 
 test_infile = "$JULIA_HOME/../share/julia/helpdb.jl"
 test_compressed = "$tmp/helpdb.jl.gz"
+test_empty = "$tmp/empty.jl.gz"
 
 @windows_only gunzip="gunzip.exe"
 @unix_only    gunzip="gunzip"
 
 test_gunzip = true
 try
-    run(`which $gunzip` |> SpawnNullStream())
+    run(`which $gunzip` |> DevNull)
 catch
     test_gunzip = false
 end
@@ -38,7 +39,7 @@ gzfile = gzopen(test_compressed, "wb")
 @test close(gzfile) != Z_OK
 
 #@test throws_exception(write(gzfile, data), GZError)
-@test_fails write(gzfile, data)
+@test_throws write(gzfile, data)
 
 if test_gunzip
     data2 = readall(`$gunzip -c $test_compressed`)
@@ -70,7 +71,7 @@ write(raw_file, zeros(Uint8, 10))
 close(raw_file)
 
 #@test throws_exception(gzopen(readall, test_compressed), GZError)
-@test_fails gzopen(readall, test_compressed)
+@test_throws gzopen(readall, test_compressed)
 
 
 ##########################
@@ -81,18 +82,22 @@ write(gzfile, data) == length(data.data)
 @test flush(gzfile) == Z_OK
 
 pos = position(gzfile)
-@test_fails seek(gzfile, 100)   # can't seek backwards on write
+@test_throws seek(gzfile, 100)   # can't seek backwards on write
 @test position(gzfile) == pos
 @test skip(gzfile, 100)
 @test position(gzfile) == pos + 100
 
 #@test throws_exception(truncate(gzfile, 100), ErrorException)
 #@test throws_exception(seekend(gzfile), ErrorException)
-@test_fails truncate(gzfile, 100)
-@test_fails seekend(gzfile)
+@test_throws truncate(gzfile, 100)
+@test_throws seekend(gzfile)
 
 @test close(gzfile) == Z_OK
 
+gzopen(test_empty, "w") do io
+    a = "".data
+    @test gzwrite(io, pointer(a), length(a)*sizeof(eltype(a))) == int32(0)
+end
 
 ##########################
 # test_group("gzip file function tests (strategy read/write)")
