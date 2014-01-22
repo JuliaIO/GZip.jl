@@ -457,7 +457,7 @@ function write{T,N}(s::GZipStream, a::SubArray{T,N,Array})
         write(s, pointer(a, 1), colsz)
     else
         cartesian_map((idxs...)->write(s, pointer(a, idxs), colsz),
-                      tuple(1, size(a)[2:]...))
+                      tuple(1, size(a)[2:end]...))
     end
 end
 
