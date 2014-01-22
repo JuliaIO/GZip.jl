@@ -183,8 +183,8 @@ gzputc(s::GZipStream, c::Integer) =
                            s.gz_file, int32(c)),                        -1)
 
 gzwrite(s::GZipStream, p::Ptr, len::Integer) =
-    @test_gzerror0(s, ccall((:gzwrite, _zlib), Int32, (Ptr{Void}, Ptr{Void}, Uint32),
-                           s.gz_file, p, len))
+    len == 0 ? int32(0) : @test_gzerror0(s, ccall((:gzwrite, _zlib), Int32, (Ptr{Void}, Ptr{Void}, Uint32),
+                                                   s.gz_file, p, len))
 
 gzread(s::GZipStream, p::Ptr, len::Integer) =
     @test_gzerror(s, ccall((:gzread, _zlib), Int32, (Ptr{Void}, Ptr{Void}, Uint32),
