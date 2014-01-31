@@ -239,8 +239,8 @@ run(`perl -e 'print pack "N*", 0xfeff, 0..0xd7ff, 0xe000..0x10ffff' ` |> UTF32BE
 run(`iconv -f UTF-32BE -t UTF-32LE $UTF32BE_path` |> UTF32LE_path)
 run(`iconv -f UTF-32BE -t UTF-8 $UTF32BE_path` |> UTF8_path)
 
-str1 = CharString(reinterpret(Char, read(open(UTF32LE_path), Uint32, 1112065)[2:]));
-str2 = UTF8String(read(open(UTF8_path), Uint8, 4382595)[4:]);
+str1 = CharString(reinterpret(Char, read(open(UTF32LE_path), Uint32, 1112065)[2:end]));
+str2 = UTF8String(read(open(UTF8_path), Uint8, 4382595)[4:end]);
 
 UTF32LE_gz = gzopen(unicode_gz_file, "w")
 write(UTF32LE_gz, str1)
