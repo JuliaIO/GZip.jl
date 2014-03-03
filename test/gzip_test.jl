@@ -123,8 +123,6 @@ for ch in modes
 
         if ch == 'T'
             @test(file_size == length(data.data))
-        elseif ch == 'F'
-            @test(file_size >= length(data.data))
         elseif level == 0
             @test(file_size > length(data.data))
         else

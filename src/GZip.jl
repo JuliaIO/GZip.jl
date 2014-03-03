@@ -4,7 +4,7 @@ module GZip
 
 import Base: show, fd, close, flush, truncate, seek,
              skip, position, eof, read, readall,
-             readuntil, readline, write, peek
+             readline, write, peek
 
 export
   GZipStream,
@@ -24,7 +24,6 @@ export
   eof,
   read,
   readall,
-  readuntil,
   readline,
   write,
   peek,
@@ -403,7 +402,7 @@ function readall(s::GZipStream, bufsize::Int)
 end
 readall(s::GZipStream) = readall(s, Z_BIG_BUFSIZE)
 
-function readuntil(s::GZipStream, c::Uint8)
+function readline(s::GZipStream)
     buf = Array(Uint8, GZ_LINE_BUFSIZE)
     pos = 1
 
@@ -414,7 +413,7 @@ function readuntil(s::GZipStream, c::Uint8)
     while(true)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
         eos = search(buf, '\0', pos)
-        if eos == 1 || buf[eos-1] == c
+        if eos == 1 || buf[eos-1] == '\n'
             return resize!(buf, eos-1)
         end
 
