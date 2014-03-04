@@ -407,18 +407,18 @@ function readline(s::GZipStream)
     pos = 1
 
     if gzgets(s, buf) == C_NULL      # Throws an exception on error
-        return buf[1:0]
+        return ""
     end
 
     while(true)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
         eos = search(buf, '\0', pos)
         if eos == 1 || buf[eos-1] == '\n'
-            return resize!(buf, eos-1)
+            return bytestring(resize!(buf, eos-1))
         end
 
         # If we're at the end of the file, return the string
-        if eof(s)  return resize!(buf, eos-1)  end
+        if eof(s)  return bytestring(resize!(buf, eos-1))  end
 
         # Otherwise, append to the end of the previous buffer
 
@@ -430,7 +430,7 @@ function readline(s::GZipStream)
         # Read in the next chunk
         if gzgets(s, pointer(buf)+pos-1, GZ_LINE_BUFSIZE) == C_NULL
             # eof(s); remove extra buffer space
-            return resize!(buf, length(buf)-add_len)
+            return bytestring(resize!(buf, length(buf)-add_len))
         end
     end
 end
