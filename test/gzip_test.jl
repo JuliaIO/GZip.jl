@@ -223,42 +223,6 @@ let BUFSIZE = 65536
     end
 end
 
-##########################
-# test_group("gzip unicode tests (write/read)")
-##########################
-
-unicode_gz_file = "$tmp/unicode_test.gz"
-
-# Use perl to generate UTF-32BE unicode data a la unicode.jl, then convert to UTF-32LE, UTF-8 via iconv
-UTF32BE_path = joinpath(tmp,"UTF32BE.unicode")
-UTF32LE_path = joinpath(tmp,"UTF32LE.unicode")
-UTF8_path = joinpath(tmp,"UTF8.unicode")
-run(`perl -e 'print pack "N*", 0xfeff, 0..0xd7ff, 0xe000..0x10ffff' ` |> UTF32BE_path)
-run(`iconv -f UTF-32BE -t UTF-32LE $UTF32BE_path` |> UTF32LE_path)
-run(`iconv -f UTF-32BE -t UTF-8 $UTF32BE_path` |> UTF8_path)
-
-str1 = CharString(reinterpret(Char, read(open(UTF32LE_path), Uint32, 1112065)[2:end]));
-str2 = UTF8String(read(open(UTF8_path), Uint8, 4382595)[4:end]);
-
-UTF32LE_gz = gzopen(unicode_gz_file, "w")
-write(UTF32LE_gz, str1)
-close(UTF32LE_gz)
-
-str1b = readall(`gunzip -c $unicode_gz_file`);
-str1c = gzopen(readall, unicode_gz_file);
-@test str1 == str1b
-@test str1 == str1c
-
-UTF8_gz = gzopen(unicode_gz_file, "w");
-write(UTF8_gz, str2)
-close(UTF8_gz)
-
-str2b = readall(`gunzip -c $unicode_gz_file`);
-str2c = gzopen(readall, unicode_gz_file);
-@test str2 == str2b
-@test str2 == str2c
-
-
 run(`rm -Rf $tmp`)
 
 #end  # for epoch
