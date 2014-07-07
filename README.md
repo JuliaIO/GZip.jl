@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/kmsquire/GZip.jl.svg)](https://travis-ci.org/kmsquire/GZip.jl)
+
 GZip.jl: A Julia interface for gzip functions in zlib
 ========================================================
 
