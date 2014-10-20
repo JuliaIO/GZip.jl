@@ -3,7 +3,7 @@
 module GZip
 
 import Base: show, fd, close, flush, truncate, seek,
-             skip, position, eof, read, readall,
+             seekend, skip, position, eof, read, readall,
              readline, write, peek
 
 export
@@ -119,7 +119,7 @@ macro test_eof_gzerr(s, cc, val)
         if $(esc(s))._closed throw(EOFError()) end
         ret = $(esc(cc))
         if ret == $(esc(val))
-            if eof($(esc(s)))  throw(EOFError())  else  throw(GZError($(esc(s))))  end
+            if eof($(esc(s)))  throw(EOFError())  else  throw(GZError(ret, $(esc(s))))  end
         end
         ret
     end
@@ -129,7 +129,7 @@ macro test_eof_gzerr2(s, cc, val)
     quote
         if $(esc(s))._closed throw(EOFError()) end
         ret = $(esc(cc))
-        if ret == $(esc(val)) && !eof($(esc(s))) throw(GZError($(esc(s)))) end
+        if ret == $(esc(val)) && !eof($(esc(s))) throw(GZError(ret, $(esc(s)))) end
         ret
     end
 end
@@ -138,7 +138,7 @@ macro test_gzerror(s, cc, val)
     quote
         if $(esc(s))._closed throw(EOFError()) end
         ret = $(esc(cc))
-        if ret == $(esc(val)) throw(ret, GZError($(esc(s)))) end
+        if ret == $(esc(val)) throw(GZError(ret, $(esc(s)))) end
         ret
     end
 end
@@ -250,7 +250,7 @@ function gzopen(f::Function, args...)
     io = gzopen(args...)
     x = try f(io) catch err
         close(io)
-        throw(err)
+        rethrow(err)
     end
     close(io)
     return x
@@ -318,7 +318,7 @@ seek(s::GZipStream, n::Integer) =
            s.gz_file, n, SEEK_SET)!=-1 || # Mimick behavior of seek(s::IOStream, n)
     error("seek (gzseek) failed"))
 
-seek_end(s::GZipStream) = error("seek_end is not supported for GZipStreams")
+seekend(s::GZipStream) = error("seekend is not supported for GZipStreams")
 
 # Note: skips bytes within uncompressed data stream
 skip(s::GZipStream, n::Integer) =
