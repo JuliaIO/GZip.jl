@@ -15,4 +15,4 @@ before_install:
 script:
   - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir("GZip"))`); Pkg.pin("GZip"); Pkg.resolve()'
   - julia -e 'using GZip; @assert isdefined(:GZip); @assert typeof(GZip) === Module'
-  - julia ./runtests.jl
+  - julia ./test/runtests.jl

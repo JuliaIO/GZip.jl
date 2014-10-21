@@ -1,8 +1,5 @@
 # Testing for gzip
 
-using GZip
-using Base.Test
-
 ##########################
 # test_context("GZip tests")
 ##########################
@@ -11,9 +8,9 @@ using Base.Test
 
 tmp = mktempdir()
 
-test_infile = "$JULIA_HOME/../share/julia/helpdb.jl"
-test_compressed = "$tmp/helpdb.jl.gz"
-test_empty = "$tmp/empty.jl.gz"
+test_infile = joinpath(Pkg.dir("GZip"), "test", "gzip_test.jl")
+test_compressed = joinpath(tmp, "gzip_test.jl.gz")
+test_empty = joinpath(tmp, "empty.jl.gz")
 
 @windows_only gunzip="gunzip.exe"
 @unix_only    gunzip="gunzip"
@@ -39,7 +36,7 @@ gzfile = gzopen(test_compressed, "wb")
 @test close(gzfile) != Z_OK
 
 #@test throws_exception(write(gzfile, data), GZError)
-@test_throws write(gzfile, data)
+@test_throws EOFError write(gzfile, data)
 
 if test_gunzip
     data2 = readall(`$gunzip -c $test_compressed`)
@@ -70,8 +67,8 @@ seek(raw_file, 3) # leave the gzip magic 2-byte header
 write(raw_file, zeros(Uint8, 10))
 close(raw_file)
 
-#@test throws_exception(gzopen(readall, test_compressed), GZError)
-@test_throws gzopen(readall, test_compressed)
+gzopen(readall, test_compressed)
+@test_throws GZError gzopen(readall, test_compressed)
 
 
 ##########################
@@ -82,15 +79,13 @@ write(gzfile, data) == length(data.data)
 @test flush(gzfile) == Z_OK
 
 pos = position(gzfile)
-@test_throws seek(gzfile, 100)   # can't seek backwards on write
+@test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
 @test position(gzfile) == pos
 @test skip(gzfile, 100)
 @test position(gzfile) == pos + 100
 
-#@test throws_exception(truncate(gzfile, 100), ErrorException)
-#@test throws_exception(seekend(gzfile), ErrorException)
-@test_throws truncate(gzfile, 100)
-@test_throws seekend(gzfile)
+@test_throws ErrorException truncate(gzfile, 100)
+@test_throws ErrorException seekend(gzfile)
 
 @test close(gzfile) == Z_OK
 
@@ -191,8 +186,8 @@ let BUFSIZE = 65536
             end
 
             # Array file
-            b_array_fn = "$tmp/b_array.raw.gz"
-            r_array_fn = "$tmp/r_array.raw.gz"
+            b_array_fn = joinpath(tmp, "b_array.raw.gz")
+            r_array_fn = joinpath(tmp, "r_array.raw.gz")
 
             gzaf_b = gzopen(b_array_fn, "w$level")
             write(gzaf_b, b)
