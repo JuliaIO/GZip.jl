@@ -67,6 +67,7 @@ seek(raw_file, 3) # leave the gzip magic 2-byte header
 write(raw_file, zeros(Uint8, 10))
 close(raw_file)
 
+gzopen(readall, test_compressed)
 @test_throws GZError gzopen(readall, test_compressed)
 
 
