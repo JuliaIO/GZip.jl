@@ -248,12 +248,9 @@ open(args...) = gzopen(args...)
 
 function gzopen(f::Function, args...)
     io = gzopen(args...)
-    x = try f(io) catch err
-        close(io)
-        throw(err)
+    try f(io)
+    finally close(io)
     end
-    close(io)
-    return x
 end
 
 function gzdopen(name::String, fd::Integer, gzmode::String, gz_buf_size::Integer)
