@@ -1,10 +1,12 @@
-[![Build Status](https://travis-ci.org/JuliaLang/GZip.jl.svg)](https://travis-ci.org/JuliaLang/GZip.jl)
+# GZip.jl: A Julia interface for gzip functions in zlib
 
-GZip.jl: A Julia interface for gzip functions in zlib
-========================================================
+[![GZip on julia-release](http://pkg.julialang.org/badges/GZip_release.svg)](http://pkg.julialang.org/?pkg=GZip&ver=release)
+[![GZip on julia-nightly](http://pkg.julialang.org/badges/GZip_nightly.svg)](http://pkg.julialang.org/?pkg=GZip&ver=nightly)
+[![Build Status](https://travis-ci.org/JuliaLang/GZip.jl.svg?branch=master)](https://travis-ci.org/JuliaLang/GZip.jl)
+[![Coverage Status](https://coveralls.io/repos/JuliaLang/GZip.jl/badge.svg)](https://coveralls.io/r/JuliaLang/GZip.jl)
 
 This module provides a wrapper for the gzip related functions of
-[zlib](http://zlib.net/>), a free, general-purpose, legally
+[zlib](http://zlib.net), a free, general-purpose, legally
 unencumbered, lossless data-compression library. These functions
 allow the reading and writing of gzip files.
 
@@ -35,5 +37,5 @@ close(fh)
 ```
 
 
-See the [documentation at ReadTheDocs](https://gzipjl.readthedocs.org/en/latest/) 
+See the [documentation](https://gzipjl.readthedocs.org/en/latest/)
 for additional information.

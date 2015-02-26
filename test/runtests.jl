@@ -1,3 +1,4 @@
+using Compat
 using GZip
 using Base.Test
 
