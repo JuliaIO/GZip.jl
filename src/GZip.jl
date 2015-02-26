@@ -2,6 +2,8 @@
 
 module GZip
 
+using Compat
+
 import Base: show, fd, close, flush, truncate, seek,
              skip, position, eof, read, readall,
              readline, write, peek
@@ -194,7 +196,7 @@ let _zlib_h = dlopen(_zlib)
 
     # Doesn't exist in zlib 1.2.3 or earlier
     if dlsym_e(_zlib_h, :gzbuffer) != C_NULL
-        gzbuffer(gz_file::Ptr, gz_buf_size::Integer) = 
+        gzbuffer(gz_file::Ptr, gz_buf_size::Integer) =
            ccall((:gzbuffer, _zlib), Int32, (Ptr{Void}, Uint32), gz_file, gz_buf_size)
     else
         gzbuffer(gz_file::Ptr, gz_buf_size::Integer) = int32(-1)
