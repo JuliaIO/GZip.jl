@@ -1,5 +1,3 @@
-# Testing for gzip
-
 using GZip
 using Base.Test
 
@@ -11,8 +9,8 @@ using Base.Test
 
 tmp = mktempdir()
 
-test_infile = "$JULIA_HOME/../share/julia/helpdb.jl"
-test_compressed = "$tmp/helpdb.jl.gz"
+test_infile = joinpath(JULIA_HOME, "..", "share", "doc", "julia", "helpdb.jl")
+test_compressed = "$tmp/julia.gz"
 test_empty = "$tmp/empty.jl.gz"
 
 @windows_only gunzip="gunzip.exe"
@@ -20,7 +18,7 @@ test_empty = "$tmp/empty.jl.gz"
 
 test_gunzip = true
 try
-    run(`which $gunzip` |> DevNull)
+    run(@compat pipe(`which $gunzip`, DevNull))
 catch
     test_gunzip = false
 end
@@ -39,7 +37,7 @@ gzfile = gzopen(test_compressed, "wb")
 @test close(gzfile) != Z_OK
 
 #@test throws_exception(write(gzfile, data), GZError)
-@test_throws write(gzfile, data)
+@test_throws EOFError write(gzfile, data)
 
 if test_gunzip
     data2 = readall(`$gunzip -c $test_compressed`)
@@ -70,8 +68,7 @@ seek(raw_file, 3) # leave the gzip magic 2-byte header
 write(raw_file, zeros(Uint8, 10))
 close(raw_file)
 
-#@test throws_exception(gzopen(readall, test_compressed), GZError)
-@test_throws gzopen(readall, test_compressed)
+@test_throws ArgumentError gzopen(readall, test_compressed)
 
 
 ##########################
@@ -82,15 +79,13 @@ write(gzfile, data) == length(data.data)
 @test flush(gzfile) == Z_OK
 
 pos = position(gzfile)
-@test_throws seek(gzfile, 100)   # can't seek backwards on write
+@test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
 @test position(gzfile) == pos
 @test skip(gzfile, 100)
 @test position(gzfile) == pos + 100
 
-#@test throws_exception(truncate(gzfile, 100), ErrorException)
-#@test throws_exception(seekend(gzfile), ErrorException)
-@test_throws truncate(gzfile, 100)
-@test_throws seekend(gzfile)
+@test_throws ErrorException truncate(gzfile, 100)
+@test_throws MethodError seekend(gzfile)
 
 @test close(gzfile) == Z_OK
 
