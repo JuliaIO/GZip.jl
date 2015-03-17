@@ -66,10 +66,15 @@ close(gzfile)
 # Screw up the file
 raw_file = open(test_compressed, "r+")
 seek(raw_file, 3) # leave the gzip magic 2-byte header
-write(raw_file, zeros(Uint8, 10))
+write(raw_file, zeros(UInt8, 10))
 close(raw_file)
 
-@test_throws ArgumentError gzopen(readall, test_compressed)
+try
+    gzopen(readall, test_compressed)
+    throw(Error("Expecting an ArgumentError or similar"))
+catch e
+    @test isa(e, ArgumentError) || contains(e.msg, "too many arguments")
+end
 
 
 ##########################
@@ -92,7 +97,7 @@ pos = position(gzfile)
 
 gzopen(test_empty, "w") do io
     a = "".data
-    @test gzwrite(io, pointer(a), length(a)*sizeof(eltype(a))) == int32(0)
+    @test gzwrite(io, pointer(a), length(a)*sizeof(eltype(a))) == @compat Int32(0)
 end
 
 ##########################
@@ -153,7 +158,7 @@ end
 
 let BUFSIZE = 65536
     for level = 0:3:6
-        for T in [Int8,Uint8,Int16,Uint16,Int32,Uint32,Int64,Uint64,Int128,Uint128,
+        for T in [Int8,UInt8,Int16,UInt16,Int32,UInt32,Int64,UInt64,Int128,UInt128,
                   Float32,Float64,Complex64,Complex128]
 
             minval = 34567
