@@ -24,7 +24,7 @@ Notes
  * This implementation mimics the :class:`IOStream` implementation, and should
    be a drop-in replacement for :class:`IOStream`, with some caveats:
 
-   * :func:`seek_end` and :func:`truncate` are not available
+   * :func:`seekend` and :func:`truncate` are not available
    * :func:`readuntil` is available, but is not very efficient.
      (But :func:`readline` works fine.)
 
@@ -43,7 +43,7 @@ following :class:`IO`/:class:`IOStream` functions are supported:
  * :func:`write()`
  * :func:`peek()`
 
-Due to limitations in ``zlib``, :func:`seek_end` and :func:`truncate` are not available.
+Due to limitations in ``zlib``, :func:`seekend` and :func:`truncate` are not available.
 
 ---------
 Functions

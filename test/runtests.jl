@@ -10,9 +10,9 @@ using Base.Test
 
 tmp = mktempdir()
 
-test_infile = joinpath(JULIA_HOME, "..", "share", "doc", "julia", "helpdb.jl")
-test_compressed = "$tmp/julia.gz"
-test_empty = "$tmp/empty.jl.gz"
+test_infile = Pkg.dir("GZip", "test", "runtests.jl")
+test_compressed = joinpath(tmp, "runtests.jl.gz")
+test_empty = joinpath(tmp, "empty.jl.gz")
 
 @windows_only gunzip="gunzip.exe"
 @unix_only    gunzip="gunzip"
@@ -37,7 +37,6 @@ gzfile = gzopen(test_compressed, "wb")
 @test close(gzfile) == Z_OK
 @test close(gzfile) != Z_OK
 
-#@test throws_exception(write(gzfile, data), GZError)
 @test_throws EOFError write(gzfile, data)
 
 if test_gunzip
@@ -71,9 +70,10 @@ close(raw_file)
 
 try
     gzopen(readall, test_compressed)
-    throw(Error("Expecting an ArgumentError or similar"))
+    throw(Error("Expecting ArgumentError or similar"))
 catch e
-    @test isa(e, ArgumentError) || contains(e.msg, "too many arguments")
+    @test typeof(e) <: Union(ArgumentError, ZError, GZError) ||
+          contains(e.msg, "too many arguments")
 end
 
 
@@ -90,7 +90,7 @@ pos = position(gzfile)
 @test skip(gzfile, 100)
 @test position(gzfile) == pos + 100
 
-@test_throws ErrorException truncate(gzfile, 100)
+@test_throws MethodError truncate(gzfile, 100)
 @test_throws MethodError seekend(gzfile)
 
 @test close(gzfile) == Z_OK
@@ -192,8 +192,8 @@ let BUFSIZE = 65536
             end
 
             # Array file
-            b_array_fn = "$tmp/b_array.raw.gz"
-            r_array_fn = "$tmp/r_array.raw.gz"
+            b_array_fn = joinpath(tmp, "b_array.raw.gz")
+            r_array_fn = joinpath(tmp, "r_array.raw.gz")
 
             gzaf_b = gzopen(b_array_fn, "w$level")
             write(gzaf_b, b)

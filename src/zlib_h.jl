@@ -6,7 +6,7 @@
 # Constants
 
 zlib_version = bytestring(ccall((:zlibVersion, _zlib), Ptr{UInt8}, ()))
-ZLIB_VERSION = tuple([parseint(c) for c in split(zlib_version, '.')]...)
+ZLIB_VERSION = tuple([parse(Int, c) for c in split(zlib_version, '.')]...)
 
 # Flush values
 const Z_NO_FLUSH       = @compat Int32(0)

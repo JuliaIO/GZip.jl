@@ -5,7 +5,7 @@ module GZip
 using Compat
 
 import Base: show, fd, close, flush, truncate, seek,
-             skip, position, eof, read, readall,
+             seekend, skip, position, eof, read, readall,
              readline, write, peek
 
 export
@@ -140,7 +140,7 @@ macro test_gzerror(s, cc, val)
     quote
         if $(esc(s))._closed throw(EOFError()) end
         ret = $(esc(cc))
-        if ret == $(esc(val)) throw(ret, GZError($(esc(s)))) end
+        if ret == $(esc(val)) throw(GZError(ret, $(esc(s)))) end
         ret
     end
 end
@@ -318,15 +318,13 @@ flush(s::GZipStream, fl::Integer) =
     @test_z_ok ccall((:gzflush, _zlib), Int32, (Ptr{Void}, Int32), s.gz_file, @compat(Int32(fl)))
 flush(s::GZipStream) = flush(s, Z_SYNC_FLUSH)
 
-truncate(s::GZipStream, n::Integer) = error("truncate is not supported for GZipStreams")
+truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, Integer)))
 
 # Note: seeks to byte position within uncompressed data stream
 seek(s::GZipStream, n::Integer) =
     (ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Void}, ZFileOffset, Int32),
            s.gz_file, n, SEEK_SET)!=-1 || # Mimick behavior of seek(s::IOStream, n)
     error("seek (gzseek) failed"))
-
-seek_end(s::GZipStream) = error("seek_end is not supported for GZipStreams")
 
 # Note: skips bytes within uncompressed data stream
 skip(s::GZipStream, n::Integer) =
