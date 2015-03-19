@@ -10,9 +10,9 @@ using Base.Test
 
 tmp = mktempdir()
 
-test_infile = joinpath(JULIA_HOME, "..", "share", "doc", "julia", "helpdb.jl")
-test_compressed = "$tmp/julia.gz"
-test_empty = "$tmp/empty.jl.gz"
+test_infile = Pkg.dir("GZip", "test", "runtests.jl")
+test_compressed = joinpath(tmp, "runtests.jl.gz")
+test_empty = joinpath(tmp, "empty.jl.gz")
 
 @windows_only gunzip="gunzip.exe"
 @unix_only    gunzip="gunzip"
@@ -37,7 +37,6 @@ gzfile = gzopen(test_compressed, "wb")
 @test close(gzfile) == Z_OK
 @test close(gzfile) != Z_OK
 
-#@test throws_exception(write(gzfile, data), GZError)
 @test_throws EOFError write(gzfile, data)
 
 if test_gunzip
@@ -66,10 +65,16 @@ close(gzfile)
 # Screw up the file
 raw_file = open(test_compressed, "r+")
 seek(raw_file, 3) # leave the gzip magic 2-byte header
-write(raw_file, zeros(Uint8, 10))
+write(raw_file, zeros(UInt8, 10))
 close(raw_file)
 
-@test_throws ArgumentError gzopen(readall, test_compressed)
+try
+    gzopen(readall, test_compressed)
+    throw(Error("Expecting ArgumentError or similar"))
+catch e
+    @test typeof(e) <: Union(ArgumentError, ZError, GZError) ||
+          contains(e.msg, "too many arguments")
+end
 
 
 ##########################
@@ -85,14 +90,14 @@ pos = position(gzfile)
 @test skip(gzfile, 100)
 @test position(gzfile) == pos + 100
 
-@test_throws ErrorException truncate(gzfile, 100)
+@test_throws MethodError truncate(gzfile, 100)
 @test_throws MethodError seekend(gzfile)
 
 @test close(gzfile) == Z_OK
 
 gzopen(test_empty, "w") do io
     a = "".data
-    @test gzwrite(io, pointer(a), length(a)*sizeof(eltype(a))) == int32(0)
+    @test gzwrite(io, pointer(a), length(a)*sizeof(eltype(a))) == @compat Int32(0)
 end
 
 ##########################
@@ -153,7 +158,7 @@ end
 
 let BUFSIZE = 65536
     for level = 0:3:6
-        for T in [Int8,Uint8,Int16,Uint16,Int32,Uint32,Int64,Uint64,Int128,Uint128,
+        for T in [Int8,UInt8,Int16,UInt16,Int32,UInt32,Int64,UInt64,Int128,UInt128,
                   Float32,Float64,Complex64,Complex128]
 
             minval = 34567
@@ -187,8 +192,8 @@ let BUFSIZE = 65536
             end
 
             # Array file
-            b_array_fn = "$tmp/b_array.raw.gz"
-            r_array_fn = "$tmp/r_array.raw.gz"
+            b_array_fn = joinpath(tmp, "b_array.raw.gz")
+            r_array_fn = joinpath(tmp, "r_array.raw.gz")
 
             gzaf_b = gzopen(b_array_fn, "w$level")
             write(gzaf_b, b)
