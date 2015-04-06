@@ -200,11 +200,11 @@ gzread(s::GZipStream, p::Ptr, len::Integer) =
                         s.gz_file, p, len),
                   -1)
 
-let _zlib_h = dlopen(_zlib)
+let _zlib_h = Libdl.dlopen(_zlib)
     global gzbuffer, _gzopen, _gzseek, _gztell
 
     # Doesn't exist in zlib 1.2.3 or earlier
-    if dlsym_e(_zlib_h, :gzbuffer) != C_NULL
+    if Libdl.dlsym_e(_zlib_h, :gzbuffer) != C_NULL
         gzbuffer(gz_file::Ptr, gz_buf_size::Integer) =
            ccall((:gzbuffer, _zlib), Int32, (Ptr{Void}, UInt32), gz_file, gz_buf_size)
     else
@@ -215,7 +215,7 @@ let _zlib_h = dlopen(_zlib)
 
     # Use 64-bit functions if available
 
-    if dlsym_e(_zlib_h, :gzopen64) != C_NULL
+    if Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL
         const _gzopen = :gzopen64
         const _gzseek = :gzseek64
         const _gztell = :gztell64

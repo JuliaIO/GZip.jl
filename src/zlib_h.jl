@@ -79,12 +79,12 @@ const SEEK_CUR = @compat Int32(1)
 # Get compile-time option flags
 zlib_compile_flags = ccall((:zlibCompileFlags, _zlib), UInt, ())
 
-let _zlib_h = dlopen(_zlib)
+let _zlib_h = Libdl.dlopen(_zlib)
     global ZFileOffset
 
     z_off_t_sz   = 2 << ((zlib_compile_flags >> 6) & @compat(UInt(3)))
     if z_off_t_sz == sizeof(FileOffset) ||
-       (sizeof(FileOffset) == 8 && dlsym_e(_zlib_h, :gzopen64) != C_NULL)
+       (sizeof(FileOffset) == 8 && Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL)
         typealias ZFileOffset FileOffset
     elseif z_off_t_sz == 4      # 64-bit functions not available
         typealias ZFileOffset Int32
