@@ -201,7 +201,7 @@ gzread(s::GZipStream, p::Ptr, len::Integer) =
                   -1)
 
 let _zlib_h = Libdl.dlopen(_zlib)
-    global gzbuffer, _gzopen, _gzseek, _gztell
+    global gzbuffer, _gzopen, _gzseek, _gztell, _gzrewind, _gzdirect
 
     # Doesn't exist in zlib 1.2.3 or earlier
     if Libdl.dlsym_e(_zlib_h, :gzbuffer) != C_NULL
@@ -226,6 +226,8 @@ let _zlib_h = Libdl.dlopen(_zlib)
         const _gztell = :gztell
         #_gzoffset = :gzoffset    ## not implemented
     end
+    const _gzrewind = :gzrewind
+    const _gzdirect = :gzdirect
 end
 
 function gzopen(fname::String, gzmode::String, gz_buf_size::Integer)
@@ -321,10 +323,16 @@ flush(s::GZipStream) = flush(s, Z_SYNC_FLUSH)
 truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, Integer)))
 
 # Note: seeks to byte position within uncompressed data stream
-seek(s::GZipStream, n::Integer) =
-    (ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Void}, ZFileOffset, Int32),
+function seek(s::GZipStream, n::Integer)
+    # Note: band-aid to avoid a bug occurring on uncompressed files under Windows
+    @windows_only if (ccall((_gzdirect, _zlib), Cint, (Ptr{Void},), s.gz_file)) == 1
+        ccall((_gzrewind, _zlib), Cint, (Ptr{Void},), s.gz_file)!=-1 ||
+            error("seek (gzseek) failed")
+    end
+    ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Void}, ZFileOffset, Int32),
            s.gz_file, n, SEEK_SET)!=-1 || # Mimick behavior of seek(s::IOStream, n)
-    error("seek (gzseek) failed"))
+        error("seek (gzseek) failed")
+end
 
 # Note: skips bytes within uncompressed data stream
 skip(s::GZipStream, n::Integer) =
