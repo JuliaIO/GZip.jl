@@ -85,10 +85,13 @@ write(gzfile, data) == length(data.data)
 @test flush(gzfile) == Z_OK
 
 pos = position(gzfile)
+pos2 = position(gzfile,true)
 @test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
 @test position(gzfile) == pos
+@test position(gzfile,true) == pos2
 @test skip(gzfile, 100)
 @test position(gzfile) == pos + 100
+@test position(gzfile,true) == pos
 
 @test_throws MethodError truncate(gzfile, 100)
 @test_throws MethodError seekend(gzfile)
