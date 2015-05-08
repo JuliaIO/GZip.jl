@@ -84,14 +84,15 @@ gzfile = gzopen(test_compressed, "wb")
 write(gzfile, data) == length(data.data)
 @test flush(gzfile) == Z_OK
 
+NEW = GZip.GZLIB_VERSION > "1.2.2.4"
 pos = position(gzfile)
-pos2 = position(gzfile,true)
+NEW && (pos2 = position(gzfile,true))
 @test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
 @test position(gzfile) == pos
-@test position(gzfile,true) == pos2
+NEW && (@test position(gzfile,true) == pos2)
 @test skip(gzfile, 100)
 @test position(gzfile) == pos + 100
-@test position(gzfile,true) == pos
+NEW && (@test position(gzfile,true) == pos2)
 
 @test_throws MethodError truncate(gzfile, 100)
 @test_throws MethodError seekend(gzfile)

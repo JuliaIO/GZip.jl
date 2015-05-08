@@ -74,6 +74,8 @@ export
 
 include("zlib_h.jl")
 
+const GZLIB_VERSION = bytestring(ccall((:zlibVersion, GZip._zlib), Ptr{UInt8}, ()))
+
 # Expected line length for strings
 const GZ_LINE_BUFSIZE = 256
 
@@ -340,9 +342,14 @@ skip(s::GZipStream, n::Integer) =
            s.gz_file, n, SEEK_CUR)!=-1 ||
      error("skip (gzseek) failed")) # Mimick behavior of skip(s::IOStream, n)
 
-position(s::GZipStream, of_raw::Bool=false) = of_raw ?
+if GZLIB_VERSION > "1.2.2.4"
+position(s::GZipStream, raw::Bool=false) = raw ?
     ccall((_gzoffset, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file) :
       ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+else
+position(s::GZipStream, raw::Bool=false) =
+      ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+end
 
 eof(s::GZipStream) = @compat Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
 
