@@ -341,7 +341,7 @@ skip(s::GZipStream, n::Integer) =
      error("skip (gzseek) failed")) # Mimick behavior of skip(s::IOStream, n)
 
 position(s::GZipStream, of_raw::Bool=false) = of_raw ?
-    ccall((_gzoffset, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+    ccall((_gzoffset, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file) :
       ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
 
 eof(s::GZipStream) = @compat Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
