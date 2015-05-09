@@ -342,7 +342,7 @@ skip(s::GZipStream, n::Integer) =
            s.gz_file, n, SEEK_CUR)!=-1 ||
      error("skip (gzseek) failed")) # Mimick behavior of skip(s::IOStream, n)
 
-if GZLIB_VERSION > "1.2.2.4"
+if GZLIB_VERSION > "1.2.3.9"
 position(s::GZipStream, raw::Bool=false) = raw ?
     ccall((_gzoffset, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file) :
       ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
