@@ -74,6 +74,8 @@ export
 
 include("zlib_h.jl")
 
+const GZLIB_VERSION = bytestring(ccall((:zlibVersion, GZip._zlib), Ptr{UInt8}, ()))
+
 # Expected line length for strings
 const GZ_LINE_BUFSIZE = 256
 
@@ -201,7 +203,7 @@ gzread(s::GZipStream, p::Ptr, len::Integer) =
                   -1)
 
 let _zlib_h = Libdl.dlopen(_zlib)
-    global gzbuffer, _gzopen, _gzseek, _gztell, _gzrewind, _gzdirect
+    global gzbuffer, _gzopen, _gzseek, _gztell, _gzrewind, _gzdirect, _gzoffset
 
     # Doesn't exist in zlib 1.2.3 or earlier
     if Libdl.dlsym_e(_zlib_h, :gzbuffer) != C_NULL
@@ -219,12 +221,12 @@ let _zlib_h = Libdl.dlopen(_zlib)
         const _gzopen = :gzopen64
         const _gzseek = :gzseek64
         const _gztell = :gztell64
-        #_gzoffset = :gzoffset64  ## not implemented
+        const _gzoffset = :gzoffset64
     else
         const _gzopen = :gzopen
         const _gzseek = :gzseek
         const _gztell = :gztell
-        #_gzoffset = :gzoffset    ## not implemented
+        const _gzoffset = :gzoffset
     end
     const _gzrewind = :gzrewind
     const _gzdirect = :gzdirect
@@ -340,8 +342,14 @@ skip(s::GZipStream, n::Integer) =
            s.gz_file, n, SEEK_CUR)!=-1 ||
      error("skip (gzseek) failed")) # Mimick behavior of skip(s::IOStream, n)
 
-position(s::GZipStream) =
-    ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+if GZLIB_VERSION > "1.2.3.9"
+position(s::GZipStream, raw::Bool=false) = raw ?
+    ccall((_gzoffset, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file) :
+      ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+else
+position(s::GZipStream, raw::Bool=false) =
+      ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+end
 
 eof(s::GZipStream) = @compat Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
 
