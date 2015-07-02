@@ -303,13 +303,13 @@ function close(s::GZipStream)
     # The garbage collector needs to be temporarily disabled because of a possible
     # race condition if it runs between testing and setting s._closed
 
-    @compat gc_enable(false)
+    gc_enable(false)
     if s._closed
-        @compat gc_enable(true)
+        gc_enable(true)
         return Z_STREAM_ERROR
     end
     s._closed = true
-    @compat gc_enable(true)
+    gc_enable(true)
 
     s.name *= " (closed)"
 
