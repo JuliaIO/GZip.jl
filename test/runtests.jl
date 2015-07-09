@@ -10,7 +10,7 @@ using Base.Test
 
 tmp = mktempdir()
 
-test_infile = Pkg.dir("GZip", "test", "runtests.jl")
+test_infile = @__FILE__
 test_compressed = joinpath(tmp, "runtests.jl.gz")
 test_empty = joinpath(tmp, "empty.jl.gz")
 
