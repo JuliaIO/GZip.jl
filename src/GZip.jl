@@ -10,6 +10,7 @@ import Base: show, fd, close, flush, truncate, seek,
 
 export
   GZipStream,
+  GZipBufferedStream,
   show,
 
 # io functions
@@ -91,6 +92,18 @@ type GZipStream <: IO
         (x = new(name, gz_file, buf_size, false); finalizer(x, close); x)
 end
 GZipStream(name::String, gz_file::Ptr{Void}) = GZipStream(name, gz_file, Z_DEFAULT_BUFSIZE)
+
+# Wrapper around GZipStream and IOBuffer for buffered I/O
+immutable GZipBufferedStream <: IO
+    s::GZipStream
+    io::IOBuffer
+
+    function GZipBufferedStream(s::GZipStream, io::IOBuffer)
+        eof(io) && !eof(s) && read(s, io)
+        new(s, io)
+    end
+end
+
 
 # gzerror
 function gzerror(err::Integer, s::GZipStream)
@@ -232,13 +245,21 @@ let _zlib_h = Libdl.dlopen(_zlib)
     const _gzdirect = :gzdirect
 end
 
-function gzopen(fname::String, gzmode::String, gz_buf_size::Integer)
+function gzopen(fname::String, gzmode::String="rb",
+    gz_buf_size::Integer=Z_DEFAULT_BUFSIZE; buffered=false)
+
     # gzmode can contain extra characters specifying
     # * compression level (0-9)
     # * strategy ('f' => filtered data, 'h' -> Huffman-only compression,
     #             'R' -> run-length encoding, 'F' -> fixed code compression)
     #
     # '+' is also not allowed
+
+    #Buffered writes not yet implemented - Ref #23, #32
+    if 'w' in gzmode && buffered
+        warn("Buffered writes not yet implemented. Turning buffering off.")
+        buffered = false
+    end
 
     # For windows, force binary mode; doesn't hurt on unix
     if !('b' in gzmode)
@@ -249,26 +270,42 @@ function gzopen(fname::String, gzmode::String, gz_buf_size::Integer)
     if gz_file == C_NULL
         throw(GZError(-1, "gzopen failed"))
     end
+
+    #Set internal buffer size
     if gz_buf_size != Z_DEFAULT_BUFSIZE
         if gzbuffer(gz_file, gz_buf_size) == -1
             # Generally a non-fatal error, although it shouldn't happen here
             gz_buf_size = Z_DEFAULT_BUFSIZE
         end
     end
-    return GZipStream(fname, gz_file, gz_buf_size)
-end
-gzopen(fname::String, gzmode::String) = gzopen(fname, gzmode, Z_DEFAULT_BUFSIZE)
-gzopen(fname::String) = gzopen(fname, "rb", Z_DEFAULT_BUFSIZE)
-open(args...) = gzopen(args...)
 
-function gzopen(f::Function, args...)
-    io = gzopen(args...)
+    #Return buffered stream if requested and supported
+    io = GZipStream(fname, gz_file, gz_buf_size)
+    if buffered
+        buf = IOBuffer(gz_buf_size)
+        GZipBufferedStream(io, buf)
+    else
+        io
+    end
+end
+open(args...; kwargs...) = gzopen(args...; kwargs...)
+
+function gzopen(f::Function, args...; kwargs...)
+    io = gzopen(args...; kwargs...)
     try f(io)
     finally close(io)
     end
 end
 
-function gzdopen(name::String, fd::Integer, gzmode::String, gz_buf_size::Integer)
+function gzdopen(fname::String, fd::Integer, gzmode::String="rb",
+    gz_buf_size::Integer=Z_DEFAULT_BUFSIZE; buffered=false)
+
+    #Buffered writes not yet implemented - Ref #23, #32
+    if 'w' in gzmode && buffered
+        warn("Buffered writes not yet implemented. Turning buffering off.")
+        buffered = false
+    end
+
     if !('b' in gzmode)
         gzmode *= "b"
     end
@@ -281,13 +318,23 @@ function gzdopen(name::String, fd::Integer, gzmode::String, gz_buf_size::Integer
     if gz_file == C_NULL
         throw(GZError(-1, "gzdopen failed"))
     end
+
+    #Set default buffer size
     if gz_buf_size != Z_DEFAULT_BUFSIZE
         if gzbuffer(gz_file, gz_buf_size) == -1
             # Generally a non-fatal error, although it shouldn't happen here
             gz_buf_size = Z_DEFAULT_BUFSIZE
         end
     end
-    return GZipStream(name, gz_file, gz_buf_size)
+
+    #Return buffered stream if requested and supported
+    io = GZipStream(fname, gz_file, gz_buf_size)
+    if buffered
+        buf = IOBuffer(gz_buf_size)
+        GZipBufferedStream(io, buf)
+    else
+        io
+    end
 end
 gzdopen(fd::Integer, gzmode::String, gz_buf_size::Integer) = gzdopen(string("<fd ",fd,">"), fd, gzmode, gz_buf_size)
 gzdopen(fd::Integer, gz_buf_size::Integer) = gzdopen(fd, "rb", gz_buf_size)
@@ -295,8 +342,7 @@ gzdopen(fd::Integer, gzmode::String) = gzdopen(fd, gzmode, Z_DEFAULT_BUFSIZE)
 gzdopen(fd::Integer) = gzdopen(fd, "rb", Z_DEFAULT_BUFSIZE)
 gzdopen(s::IOStream, args...) = gzdopen(fd(s), args...)
 
-
-fd(s::GZipStream) = error("fd is not supported for GZipStreams")
+fd(s::GZipStream) = throw(ArgumentError("fd is not supported for GZipStreams"))
 
 function close(s::GZipStream)
 
@@ -316,6 +362,11 @@ function close(s::GZipStream)
     ret = (@test_z_ok ccall((:gzclose, _zlib), Int32, (Ptr{Void},), s.gz_file))
 
     return ret
+end
+
+function close(s::GZipBufferedStream)
+    close(s.s)
+    close(s.io)
 end
 
 flush(s::GZipStream, fl::Integer) =
@@ -350,8 +401,10 @@ else
 position(s::GZipStream, raw::Bool=false) =
       ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
 end
+position(s::GZip.GZipBufferedStream, raw::Bool=false) = position(s.s, raw)
 
 eof(s::GZipStream) = @compat Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
+eof(s::GZipBufferedStream) = eof(s.io)
 
 function peek(s::GZipStream)
     c = gzgetc_raw(s)
@@ -390,6 +443,27 @@ function read(s::GZipStream, ::Type{UInt8})
     @compat UInt8(ret)
 end
 
+function read(s::GZipBufferedStream, ::Type{UInt8})
+    c = read(s.io, UInt8)
+
+    #Check if we should reload buffer
+    eof(s.io) && !eof(s.s) && read(s.s, s.io)
+
+    c
+end
+
+#Like read(::GZipStream), but don't complain if returned data is smaller than
+#buffer
+function read(s::GZipStream, io::IOBuffer)
+    ret = ccall((:gzread, _zlib), Int32, (Ptr{Void}, Ptr{Void},
+        UInt32), s.gz_file, io.data, s.buf_size)
+
+    ret==-1 && throw(GZError(s))
+
+    io.size = ret #set buffer size to number of bytes returned
+    peek(s) # force eof to be set
+    seek(io, 0)
+end
 
 # For this function, it's really unfortunate that zlib is
 # not integrated with ios
