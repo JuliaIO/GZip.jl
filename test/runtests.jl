@@ -227,8 +227,25 @@ try
             end
         end
     end
+
+
+    # Simple test for buffered GZip functions
+    GZip.open(test_compressed, "wb") do io
+        for i=1:10_000_000
+            write(io, rand(UInt8))
+        end
+    end
+
+    GZip.open(test_compressed, buffered=true) do io
+        while true
+            read(io, UInt8)
+            eof(io) && break
+        end
+    end
 finally
     rm(tmp, recursive=true)
 end
 
 #end  # for epoch
+run(`rm -Rf $tmp`)
+
