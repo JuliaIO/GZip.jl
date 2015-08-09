@@ -299,17 +299,10 @@ gzdopen(s::IOStream, args...) = gzdopen(fd(s), args...)
 fd(s::GZipStream) = error("fd is not supported for GZipStreams")
 
 function close(s::GZipStream)
-
-    # The garbage collector needs to be temporarily disabled because of a possible
-    # race condition if it runs between testing and setting s._closed
-
-    gc_enable(false)
     if s._closed
-        gc_enable(true)
         return Z_STREAM_ERROR
     end
     s._closed = true
-    gc_enable(true)
 
     s.name *= " (closed)"
 
