@@ -19,7 +19,7 @@ test_empty = joinpath(tmp, "empty.jl.gz")
 
 test_gunzip = true
 try
-    run(@compat pipe(`which $gunzip`, DevNull))
+    run(@compat pipeline(`which $gunzip`, DevNull))
 catch
     test_gunzip = false
 end
