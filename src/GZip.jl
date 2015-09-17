@@ -81,16 +81,16 @@ const GZ_LINE_BUFSIZE = 256
 
 # Wrapper around gzFile
 type GZipStream <: IO
-    name::String
+    name::AbstractString
     gz_file::Ptr{Void}
     buf_size::Int
 
     _closed::Bool
 
-    GZipStream(name::String, gz_file::Ptr{Void}, buf_size::Int) =
+    GZipStream(name::AbstractString, gz_file::Ptr{Void}, buf_size::Int) =
         (x = new(name, gz_file, buf_size, false); finalizer(x, close); x)
 end
-GZipStream(name::String, gz_file::Ptr{Void}) = GZipStream(name, gz_file, Z_DEFAULT_BUFSIZE)
+GZipStream(name::AbstractString, gz_file::Ptr{Void}) = GZipStream(name, gz_file, Z_DEFAULT_BUFSIZE)
 
 # gzerror
 function gzerror(err::Integer, s::GZipStream)
@@ -108,9 +108,9 @@ gzerror(s::GZipStream) = gzerror(0, s)
 
 type GZError <: Exception
     err::Int32
-    err_str::String
+    err_str::AbstractString
 
-    GZError(e::Integer, str::String) = new(@compat(Int32(e)), str)
+    GZError(e::Integer, str::AbstractString) = new(@compat(Int32(e)), str)
     GZError(e::Integer, s::GZipStream) = (a = gzerror(e, s); new(a[1], a[2]))
     GZError(s::GZipStream) = (a = gzerror(s); new(a[1], a[2]))
 end
@@ -232,7 +232,7 @@ let _zlib_h = Libdl.dlopen(_zlib)
     const _gzdirect = :gzdirect
 end
 
-function gzopen(fname::String, gzmode::String, gz_buf_size::Integer)
+function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Integer)
     # gzmode can contain extra characters specifying
     # * compression level (0-9)
     # * strategy ('f' => filtered data, 'h' -> Huffman-only compression,
@@ -257,8 +257,8 @@ function gzopen(fname::String, gzmode::String, gz_buf_size::Integer)
     end
     return GZipStream(fname, gz_file, gz_buf_size)
 end
-gzopen(fname::String, gzmode::String) = gzopen(fname, gzmode, Z_DEFAULT_BUFSIZE)
-gzopen(fname::String) = gzopen(fname, "rb", Z_DEFAULT_BUFSIZE)
+gzopen(fname::AbstractString, gzmode::AbstractString) = gzopen(fname, gzmode, Z_DEFAULT_BUFSIZE)
+gzopen(fname::AbstractString) = gzopen(fname, "rb", Z_DEFAULT_BUFSIZE)
 open(args...) = gzopen(args...)
 
 function gzopen(f::Function, args...)
@@ -268,7 +268,7 @@ function gzopen(f::Function, args...)
     end
 end
 
-function gzdopen(name::String, fd::Integer, gzmode::String, gz_buf_size::Integer)
+function gzdopen(name::AbstractString, fd::Integer, gzmode::AbstractString, gz_buf_size::Integer)
     if !('b' in gzmode)
         gzmode *= "b"
     end
@@ -289,9 +289,9 @@ function gzdopen(name::String, fd::Integer, gzmode::String, gz_buf_size::Integer
     end
     return GZipStream(name, gz_file, gz_buf_size)
 end
-gzdopen(fd::Integer, gzmode::String, gz_buf_size::Integer) = gzdopen(string("<fd ",fd,">"), fd, gzmode, gz_buf_size)
+gzdopen(fd::Integer, gzmode::AbstractString, gz_buf_size::Integer) = gzdopen(string("<fd ",fd,">"), fd, gzmode, gz_buf_size)
 gzdopen(fd::Integer, gz_buf_size::Integer) = gzdopen(fd, "rb", gz_buf_size)
-gzdopen(fd::Integer, gzmode::String) = gzdopen(fd, gzmode, Z_DEFAULT_BUFSIZE)
+gzdopen(fd::Integer, gzmode::AbstractString) = gzdopen(fd, gzmode, Z_DEFAULT_BUFSIZE)
 gzdopen(fd::Integer) = gzdopen(fd, "rb", Z_DEFAULT_BUFSIZE)
 gzdopen(s::IOStream, args...) = gzdopen(fd(s), args...)
 

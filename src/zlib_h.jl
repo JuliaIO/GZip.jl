@@ -33,7 +33,7 @@ const Z_VERSION_ERROR  = @compat Int32(-6)
 zerror(e::Integer) = bytestring(ccall((:zError, _zlib), Ptr{UInt8}, (Int32,), e))
 type ZError <: Exception
     err::Int32
-    err_str::String
+    err_str::AbstractString
 
     ZError(e::Integer) = (e == Z_ERRNO ? new(e, strerror()) : new(e, zerror(e)))
 end

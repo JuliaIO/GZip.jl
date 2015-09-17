@@ -19,7 +19,7 @@ test_empty = joinpath(tmp, "empty.jl.gz")
 
 test_gunzip = true
 try
-    run(@compat pipeline(`which $gunzip`, DevNull))
+    run(pipeline(`which $gunzip`, DevNull))
 catch
     test_gunzip = false
 end
@@ -185,7 +185,7 @@ try
                 end
 
                 # Random array
-                if isa(T, FloatingPoint)
+                if isa(T, AbstractFloat)
                     r = (T)[rand(BUFSIZE)...];
                 elseif isa(T, Complex64)
                     r = Int32[rand(BUFSIZE)...] + Int32[rand(BUFSIZE)...] * im
