@@ -19,7 +19,7 @@ test_empty = joinpath(tmp, "empty.jl.gz")
 
 test_gunzip = true
 try
-    run(@compat pipe(`which $gunzip`, DevNull))
+    run(@compat pipeline(`which $gunzip`, DevNull))
 catch
     test_gunzip = false
 end
@@ -72,7 +72,7 @@ try
     gzopen(readall, test_compressed)
     throw(Error("Expecting ArgumentError or similar"))
 catch e
-    @test typeof(e) <: Union(ArgumentError, ZError, GZError) ||
+    @test typeof(e) <: Union{ArgumentError, ZError, GZError} ||
           contains(e.msg, "too many arguments")
 end
 
