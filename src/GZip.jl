@@ -26,6 +26,7 @@ export
   eof,
   read,
   readall,
+  gzreadall,
   readline,
   write,
   peek,
@@ -416,6 +417,8 @@ function readall(s::GZipStream, bufsize::Int)
     end
 end
 readall(s::GZipStream) = readall(s, Z_BIG_BUFSIZE)
+gzreadall(filename::AbstractString) = gzopen(readall, filename)
+
 
 function readline(s::GZipStream)
     buf = Array(UInt8, GZ_LINE_BUFSIZE)
@@ -451,6 +454,7 @@ function readline(s::GZipStream)
 end
 
 write(s::GZipStream, b::UInt8) = gzputc(s, b)
+gzwrite(filename::AbstractString, data) = gzopen(io -> write(io, data), filename, "w")
 
 function write{T}(s::GZipStream, a::Array{T})
     if isbits(T)
