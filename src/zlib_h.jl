@@ -72,23 +72,16 @@ const SEEK_SET = @compat Int32(0)
 const SEEK_CUR = @compat Int32(1)
 
 # Create ZFileOffset alias
-# This is usually the same as FileOffset,
-# unless we're on a 32-bit system and
-# 64-bit functions are not available
+# Use 64bit if the *64 functions are available or zlib is compiles with 64bit
+# file offset.
 
 # Get compile-time option flags
-zlib_compile_flags = ccall((:zlibCompileFlags, _zlib), UInt, ())
-
-let _zlib_h = Libdl.dlopen(_zlib)
-    global ZFileOffset
-
-    z_off_t_sz   = 2 << ((zlib_compile_flags >> 6) & @compat(UInt(3)))
-    if z_off_t_sz == sizeof(FileOffset) ||
-       (sizeof(FileOffset) == 8 && Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL)
-        typealias ZFileOffset FileOffset
-    elseif z_off_t_sz == 4      # 64-bit functions not available
-        typealias ZFileOffset Int32
-    else
-        error("Can't figure out what to do with ZFileOffset.  sizeof(z_off_t) = ", z_off_t_sz)
-    end
+const zlib_compile_flags = ccall((:zlibCompileFlags, _zlib), UInt, ())
+const z_off_t_sz = 2 << ((zlib_compile_flags >> 6) & @compat(UInt(3)))
+if (z_off_t_sz == 8 || Libdl.dlsym_e(Libdl.dlopen(_zlib), :gzopen64) != C_NULL)
+    typealias ZFileOffset Int64
+elseif z_off_t_sz == 4
+    typealias ZFileOffset Int32
+else
+    error("Can't figure out what to do with ZFileOffset. sizeof(z_off_t) = ", z_off_t_sz)
 end
