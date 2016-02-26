@@ -156,6 +156,14 @@ try
         end
     end
 
+    # Test to create and read an empty file
+    gzfile = gzopen(test_compressed, "wb")
+    @test write(gzfile, "") == 0
+    @test close(gzfile) == Z_OK
+    gzfile = gzopen(test_compressed, "r")
+    @test eof(gzfile) == true
+    @test close(gzfile) == Z_OK
+
     ##########################
     # test_group("gzip array/matrix tests (write/read)")
     ##########################

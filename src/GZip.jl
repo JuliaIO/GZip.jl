@@ -255,7 +255,9 @@ function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Inte
             gz_buf_size = Z_DEFAULT_BUFSIZE
         end
     end
-    return GZipStream(fname, gz_file, gz_buf_size)
+    s = GZipStream(fname, gz_file, gz_buf_size)
+    peek(s) # Set EOF-bit for empty files
+    return s
 end
 gzopen(fname::AbstractString, gzmode::AbstractString) = gzopen(fname, gzmode, Z_DEFAULT_BUFSIZE)
 gzopen(fname::AbstractString) = gzopen(fname, "rb", Z_DEFAULT_BUFSIZE)
@@ -287,7 +289,9 @@ function gzdopen(name::AbstractString, fd::Integer, gzmode::AbstractString, gz_b
             gz_buf_size = Z_DEFAULT_BUFSIZE
         end
     end
-    return GZipStream(name, gz_file, gz_buf_size)
+    s = GZipStream(name, gz_file, gz_buf_size)
+    peek(s) # Set EOF-bit for empty files
+    return s
 end
 gzdopen(fd::Integer, gzmode::AbstractString, gz_buf_size::Integer) = gzdopen(string("<fd ",fd,">"), fd, gzmode, gz_buf_size)
 gzdopen(fd::Integer, gz_buf_size::Integer) = gzdopen(fd, "rb", gz_buf_size)
