@@ -432,7 +432,7 @@ function readline(s::GZipStream)
     while(true)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
         eos = search(buf, '\0', pos)
-        if eos == 1 || buf[eos-1] == '\n'
+        if eos == 1 || buf[eos-1] == @compat UInt8('\n')
             return bytestring(resize!(buf, eos-1))
         end
 
@@ -463,7 +463,7 @@ function write{T}(s::GZipStream, a::Array{T})
         invoke(write, (Any, Array), s, a)
     end
 end
-
+write(s::GZipStream, a::Array{UInt8}) = gzwrite(s, pointer(a), sizeof(a))
 write(s::GZipStream, p::Ptr, nb::Integer) = gzwrite(s, p, nb)
 
 function write{T,N}(s::GZipStream, a::SubArray{T,N,Array})
