@@ -59,7 +59,7 @@ try
 
     # Test peek
     gzfile = gzopen(test_compressed, "r")
-    @test peek(gzfile) == UInt(first_char)
+    @test peek(gzfile) == @compat UInt(first_char)
     readstring(gzfile)
     @test peek(gzfile) == -1
     close(gzfile)
