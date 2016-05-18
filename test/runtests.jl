@@ -1,4 +1,5 @@
 using Compat
+using Compat: readstring
 using GZip
 using Base.Test
 
@@ -29,7 +30,7 @@ try
     # test_group("Compress Test1: gzip.jl")
     ##########################
 
-    data = open(readall, test_infile);
+    data = open(readstring, test_infile);
 
     first_char = data[1]
 
@@ -41,25 +42,25 @@ try
     @test_throws EOFError write(gzfile, data)
 
     if test_gunzip
-        data2 = readall(`$gunzip -c $test_compressed`)
+        data2 = readstring(`$gunzip -c $test_compressed`)
         @test data == data2
     end
 
-    data3 = gzopen(readall, test_compressed)
+    data3 = gzopen(readstring, test_compressed)
     @test data == data3
 
     # Test gzfdio
     raw_file = open(test_compressed, "r")
     gzfile = gzdopen(fd(raw_file), "r")
-    data4 = readall(gzfile)
+    data4 = readstring(gzfile)
     close(gzfile)
     close(raw_file)
     @test data == data4
 
     # Test peek
     gzfile = gzopen(test_compressed, "r")
-    @test peek(gzfile) == first_char
-    readall(gzfile)
+    @test peek(gzfile) == @compat UInt(first_char)
+    readstring(gzfile)
     @test peek(gzfile) == -1
     close(gzfile)
 
@@ -70,7 +71,7 @@ try
     close(raw_file)
 
     @compat try
-        gzopen(readall, test_compressed)
+        gzopen(readstring, test_compressed)
         throw(ErrorException("Expecting ArgumentError or similar"))
     catch ex
         @test typeof(ex) <: Union{ArgumentError,ZError,GZError} ||
