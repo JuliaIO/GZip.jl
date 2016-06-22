@@ -2,7 +2,7 @@
 
 @static if is_unix()
     const _zlib = "libz"
-elseif iswindows()
+elseif is_windows()
     const _zlib = "zlib1"
 end
 
