@@ -1,6 +1,6 @@
 # general zlib constants, definitions
 
-@static if is_unix()
+if is_unix()
     const _zlib = "libz"
 elseif is_windows()
     const _zlib = "zlib1"
