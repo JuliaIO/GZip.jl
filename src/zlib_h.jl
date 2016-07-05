@@ -1,11 +1,14 @@
 # general zlib constants, definitions
 
-@unix_only    const _zlib = "libz"
-@windows_only const _zlib = "zlib1"
+if is_unix()
+    const _zlib = "libz"
+elseif is_windows()
+    const _zlib = "zlib1"
+end
 
 # Constants
 
-zlib_version = bytestring(ccall((:zlibVersion, _zlib), Ptr{UInt8}, ()))
+zlib_version = @compat unsafe_string(ccall((:zlibVersion, _zlib), Ptr{UInt8}, ()))
 ZLIB_VERSION = tuple([parse(Int, c) for c in split(zlib_version, '.')]...)
 
 # Flush values
@@ -30,7 +33,7 @@ const Z_VERSION_ERROR  = @compat Int32(-6)
 
 
 # Zlib errors as Exceptions
-zerror(e::Integer) = bytestring(ccall((:zError, _zlib), Ptr{UInt8}, (Int32,), e))
+zerror(e::Integer) = @compat unsafe_string(ccall((:zError, _zlib), Ptr{UInt8}, (Int32,), e))
 type ZError <: Exception
     err::Int32
     err_str::AbstractString

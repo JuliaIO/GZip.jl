@@ -4,6 +4,7 @@ VERSION >= v"0.4.0-dev+6521" && __precompile__(true)
 module GZip
 
 using Compat
+using Compat: unsafe_convert
 
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read, readall,
