@@ -4,7 +4,7 @@ VERSION >= v"0.4.0-dev+6521" && __precompile__(true)
 module GZip
 
 using Compat
-import Compat: unsafe_convert, unsafe_string, UTF8String
+import Compat: unsafe_convert, unsafe_string, String
 
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read, readall,
@@ -416,7 +416,7 @@ function readall(s::GZipStream, bufsize::Int)
             if length(buf) > len
                 resize!(buf, len)
             end
-            return UTF8String(copy(buf))
+            return @compat String(copy(buf))
         end
         len += ret
         # Grow the buffer so that bufsize bytes will fit
@@ -437,12 +437,12 @@ function readline(s::GZipStream)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
         eos = search(buf, '\0', pos)
         if eos == 1 || buf[eos-1] == @compat UInt8('\n')
-            return UTF8String(copy(resize!(buf, eos-1)))
+            return @compat String(copy(resize!(buf, eos-1)))
         end
 
         # If we're at the end of the file, return the string
         if eof(s)
-            return UTF8String(copy(resize!(buf, eos-1)))
+            return @compat String(copy(resize!(buf, eos-1)))
         end
 
         # Otherwise, append to the end of the previous buffer
@@ -455,7 +455,7 @@ function readline(s::GZipStream)
         # Read in the next chunk
         if gzgets(s, pointer(buf)+pos-1, GZ_LINE_BUFSIZE) == C_NULL
             # eof(s); remove extra buffer space
-            return UTF8String(copy(resize!(buf, length(buf)-add_len)))
+            return @compat String(copy(resize!(buf, length(buf)-add_len)))
         end
     end
 end
