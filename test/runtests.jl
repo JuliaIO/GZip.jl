@@ -15,7 +15,11 @@ test_infile = @__FILE__
 test_compressed = joinpath(tmp, "runtests.jl.gz")
 test_empty = joinpath(tmp, "empty.jl.gz")
 
-gunzip = "gunzip" * (is_windows() ? ".exe" : "")
+if is_windows()
+    gunzip = "gunzip.exe"
+elseif is_unix()
+    gunzip = "gunzip"
+end
 
 test_gunzip = true
 try
