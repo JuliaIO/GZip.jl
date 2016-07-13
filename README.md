@@ -1,7 +1,8 @@
 # GZip.jl: A Julia interface for gzip functions in zlib
 
-[![GZip](http://pkg.julialang.org/badges/GZip_0.3.svg)](http://pkg.julialang.org/?pkg=GZip&ver=0.3)
-[![GZip](http://pkg.julialang.org/badges/GZip_0.4.svg)](http://pkg.julialang.org/?pkg=GZip&ver=0.4)
+[![GZip](http://pkg.julialang.org/badges/GZip_0.3.svg)](http://pkg.julialang.org/?pkg=GZip)
+[![GZip](http://pkg.julialang.org/badges/GZip_0.4.svg)](http://pkg.julialang.org/?pkg=GZip)
+[![GZip](http://pkg.julialang.org/badges/GZip_0.5.svg)](http://pkg.julialang.org/?pkg=GZip)
 [![Build Status](https://travis-ci.org/JuliaLang/GZip.jl.svg?branch=master)](https://travis-ci.org/JuliaLang/GZip.jl)
 [![Coverage Status](https://coveralls.io/repos/JuliaLang/GZip.jl/badge.svg)](https://coveralls.io/r/JuliaLang/GZip.jl)
 

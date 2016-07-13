@@ -1,5 +1,5 @@
 using Compat
-using Compat: readstring
+import Compat: readstring
 using GZip
 using Base.Test
 
@@ -15,8 +15,7 @@ test_infile = @__FILE__
 test_compressed = joinpath(tmp, "runtests.jl.gz")
 test_empty = joinpath(tmp, "empty.jl.gz")
 
-@windows_only gunzip="gunzip.exe"
-@unix_only    gunzip="gunzip"
+gunzip = "gunzip" * (is_windows() ? ".exe" : "")
 
 test_gunzip = true
 try
