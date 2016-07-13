@@ -395,7 +395,7 @@ end
 # For this function, it's really unfortunate that zlib is
 # not integrated with ios
 function readall(s::GZipStream, bufsize::Int)
-    buf = Array{UInt8}(bufsize)
+    buf = @compat Array{UInt8}(bufsize)
     len = 0
     while true
         ret = gzread(s, pointer(buf)+len, bufsize)
@@ -426,7 +426,7 @@ end
 readall(s::GZipStream) = readall(s, Z_BIG_BUFSIZE)
 
 function readline(s::GZipStream)
-    buf = Array{UInt8}(GZ_LINE_BUFSIZE)
+    buf = @compat Array{UInt8}(GZ_LINE_BUFSIZE)
     pos = 1
 
     if gzgets(s, buf) == C_NULL      # Throws an exception on error
