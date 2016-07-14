@@ -19,6 +19,8 @@ if is_windows()
     gunzip = "gunzip.exe"
 elseif is_unix()
     gunzip = "gunzip"
+else
+    error("Unknown operating system")
 end
 
 test_gunzip = true
