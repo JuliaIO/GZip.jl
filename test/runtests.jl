@@ -20,7 +20,7 @@ if is_windows()
 elseif is_unix()
     gunzip = "gunzip"
 else
-    error("Unknown operating system")
+    throw(ErrorException("Unknown operating system"))
 end
 
 test_gunzip = true
