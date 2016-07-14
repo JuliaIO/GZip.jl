@@ -4,7 +4,7 @@ VERSION >= v"0.4.0-dev+6521" && __precompile__(true)
 module GZip
 
 using Compat
-using Compat: unsafe_convert
+import Compat: unsafe_convert, unsafe_string, String
 
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read, readall,
@@ -76,7 +76,7 @@ export
 
 include("zlib_h.jl")
 
-const GZLIB_VERSION = bytestring(ccall((:zlibVersion, GZip._zlib), Ptr{UInt8}, ()))
+const GZLIB_VERSION = unsafe_string(ccall((:zlibVersion, GZip._zlib), Ptr{UInt8}, ()))
 
 # Expected line length for strings
 const GZ_LINE_BUFSIZE = 256
@@ -100,7 +100,7 @@ function gzerror(err::Integer, s::GZipStream)
     if !s._closed
         msg_p = ccall((:gzerror, _zlib), Ptr{UInt8}, (Ptr{Void}, Ptr{Int32}),
                       s.gz_file, e)
-        msg = (msg_p == C_NULL ? "" : bytestring(msg_p))
+        msg = (msg_p == C_NULL ? "" : unsafe_string(msg_p))
     else
         msg = "(GZipStream closed)"
     end
@@ -326,9 +326,11 @@ truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, I
 # Note: seeks to byte position within uncompressed data stream
 function seek(s::GZipStream, n::Integer)
     # Note: band-aid to avoid a bug occurring on uncompressed files under Windows
-    @windows_only if (ccall((_gzdirect, _zlib), Cint, (Ptr{Void},), s.gz_file)) == 1
-        ccall((_gzrewind, _zlib), Cint, (Ptr{Void},), s.gz_file)!=-1 ||
-            error("seek (gzseek) failed")
+    @static if is_windows()
+        if (ccall((_gzdirect, _zlib), Cint, (Ptr{Void},), s.gz_file)) == 1
+            ccall((_gzrewind, _zlib), Cint, (Ptr{Void},), s.gz_file)!=-1 ||
+                error("seek (gzseek) failed")
+        end
     end
     ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Void}, ZFileOffset, Int32),
            s.gz_file, n, SEEK_SET)!=-1 || # Mimick behavior of seek(s::IOStream, n)
@@ -393,7 +395,7 @@ end
 # For this function, it's really unfortunate that zlib is
 # not integrated with ios
 function readall(s::GZipStream, bufsize::Int)
-    buf = Array(UInt8, bufsize)
+    buf = @compat Array{UInt8}(bufsize)
     len = 0
     while true
         ret = gzread(s, pointer(buf)+len, bufsize)
@@ -414,7 +416,7 @@ function readall(s::GZipStream, bufsize::Int)
             if length(buf) > len
                 resize!(buf, len)
             end
-            return bytestring(buf)
+            return @compat String(copy(buf))
         end
         len += ret
         # Grow the buffer so that bufsize bytes will fit
@@ -424,7 +426,7 @@ end
 readall(s::GZipStream) = readall(s, Z_BIG_BUFSIZE)
 
 function readline(s::GZipStream)
-    buf = Array(UInt8, GZ_LINE_BUFSIZE)
+    buf = @compat Array{UInt8}(GZ_LINE_BUFSIZE)
     pos = 1
 
     if gzgets(s, buf) == C_NULL      # Throws an exception on error
@@ -435,11 +437,13 @@ function readline(s::GZipStream)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
         eos = search(buf, '\0', pos)
         if eos == 1 || buf[eos-1] == @compat UInt8('\n')
-            return bytestring(resize!(buf, eos-1))
+            return @compat String(copy(resize!(buf, eos-1)))
         end
 
         # If we're at the end of the file, return the string
-        if eof(s)  return bytestring(resize!(buf, eos-1))  end
+        if eof(s)
+            return @compat String(copy(resize!(buf, eos-1)))
+        end
 
         # Otherwise, append to the end of the previous buffer
 
@@ -451,7 +455,7 @@ function readline(s::GZipStream)
         # Read in the next chunk
         if gzgets(s, pointer(buf)+pos-1, GZ_LINE_BUFSIZE) == C_NULL
             # eof(s); remove extra buffer space
-            return bytestring(resize!(buf, length(buf)-add_len))
+            return @compat String(copy(resize!(buf, length(buf)-add_len)))
         end
     end
 end
