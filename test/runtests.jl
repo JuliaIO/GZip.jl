@@ -49,7 +49,7 @@ end
         @test data == data2
     end
 
-    data3 = gzopen(readstring, test_compressed);
+    data3 = gzopen(readstring, test_compressed)
     @test data == data3
 
     # Test gzfdio, which is not implemented in the Windows library.
