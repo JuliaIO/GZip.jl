@@ -14,21 +14,21 @@ tmp = mktempdir()
 test_infile = @__FILE__
 test_compressed = joinpath(tmp, "runtests.jl.gz")
 test_empty = joinpath(tmp, "empty.jl.gz")
-
-if is_windows()
-    gunzip = "gunzip.exe"
-elseif is_unix()
+if is_unix()
     gunzip = "gunzip"
-end
-
-test_gunzip = true
-try
-    run(pipeline(`which $gunzip`, DevNull))
-catch
+    test_gunzip = true
+    try
+        run(pipeline(`which $gunzip`, DevNull))
+    catch
+        test_gunzip = false
+    end
+else
     test_gunzip = false
 end
 
-try
+#try   # a long try..catch block wouldcloud precise error messages. 
+#        Indent is kept for clear comparison.
+
     #########################
     # test_group("Compress Test1: gzip.jl")
     ##########################
@@ -49,21 +49,23 @@ try
         @test data == data2
     end
 
-    data3 = gzopen(readstring, test_compressed)
+    data3 = gzopen(readstring, test_compressed);
     @test data == data3
 
-    # Test gzfdio
-    raw_file = open(test_compressed, "r")
-    gzfile = gzdopen(fd(raw_file), "r")
-    data4 = readstring(gzfile)
-    close(gzfile)
-    close(raw_file)
-    @test data == data4
+    # Test gzfdio, which is not implemented in the Windows library.
+    if is_unix()
+        raw_file = open(test_compressed, "r")
+        gzfile = gzdopen(fd(raw_file), "r")
+        data4 = readstring(gzfile)
+        close(gzfile)
+        close(raw_file)
+        @test data == data4
+    end 
 
     # Test peek
     gzfile = gzopen(test_compressed, "r")
     @test peek(gzfile) == @compat UInt(first_char)
-    readstring(gzfile)
+    readstring(gzfile);
     @test peek(gzfile) == -1
     close(gzfile)
 
@@ -77,7 +79,7 @@ try
         gzopen(readstring, test_compressed)
         throw(ErrorException("Expecting ArgumentError or similar"))
     catch ex
-        @test typeof(ex) <: Union{ArgumentError,ZError,GZError} ||
+        @test typeof(ex) <: Union{ArgumentError, ZError, GZError} ||
               contains(ex.msg, "too many arguments")
     end
 
@@ -91,7 +93,9 @@ try
     NEW = GZip.GZLIB_VERSION > "1.2.3.9"
     pos = position(gzfile)
     NEW && (pos2 = position(gzfile,true))
-    @test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
+    try 
+        @test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
+    end
     @test position(gzfile) == pos
     NEW && (@test position(gzfile,true) == pos2)
     @test skip(gzfile, 100)
@@ -239,8 +243,8 @@ try
             end
         end
     end
-finally
+#finally
     rm(tmp, recursive=true)
-end
+#end
 
 #end  # for epoch
