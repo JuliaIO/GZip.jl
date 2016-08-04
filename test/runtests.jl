@@ -26,7 +26,7 @@ else
     test_gunzip = false
 end
 
-#try   # a long try..catch block wouldcloud precise error messages. 
+#try   # a long try..catch block wouldcloud precise error messages.
 #        Indent is kept for clear comparison.
 
     #########################
@@ -60,12 +60,12 @@ end
         close(gzfile)
         close(raw_file)
         @test data == data4
-    end 
+    end
 
     # Test peek
     gzfile = gzopen(test_compressed, "r")
     @test peek(gzfile) == @compat UInt(first_char)
-    readstring(gzfile);
+    readstring(gzfile)
     @test peek(gzfile) == -1
     close(gzfile)
 
@@ -93,7 +93,7 @@ end
     NEW = GZip.GZLIB_VERSION > "1.2.3.9"
     pos = position(gzfile)
     NEW && (pos2 = position(gzfile,true))
-    try 
+    try
         @test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
     end
     @test position(gzfile) == pos
