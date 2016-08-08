@@ -93,9 +93,7 @@ end
     NEW = GZip.GZLIB_VERSION > "1.2.3.9"
     pos = position(gzfile)
     NEW && (pos2 = position(gzfile,true))
-    try
-        @test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
-    end
+    !is_windows() && @test_throws ErrorException seek(gzfile, 100)   # can't seek backwards on write
     @test position(gzfile) == pos
     NEW && (@test position(gzfile,true) == pos2)
     @test skip(gzfile, 100)
