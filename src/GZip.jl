@@ -378,7 +378,7 @@ function read{T}(s::GZipStream, a::Array{T})
         peek(s) # force eof to be set
         a
     else
-        invoke(read, (IO, Array), s, a)
+        @compat invoke(read, Tuple{IO,Array}, s, a)
     end
 end
 
@@ -466,7 +466,7 @@ function write{T}(s::GZipStream, a::Array{T})
     if isbits(T)
         return gzwrite(s, pointer(a), length(a)*sizeof(T))
     else
-        invoke(write, (Any, Array), s, a)
+        @compat invoke(write, Tuple{Any,Array}, s, a)
     end
 end
 write(s::GZipStream, a::Array{UInt8}) = gzwrite(s, pointer(a), sizeof(a))
@@ -474,7 +474,7 @@ write(s::GZipStream, p::Ptr, nb::Integer) = gzwrite(s, p, nb)
 
 function write{T,N}(s::GZipStream, a::SubArray{T,N,Array})
     if !isbits(T) || stride(a,1)!=1
-        return invoke(write, (Any, AbstractArray), s, a)
+        return @compat invoke(write, Tuple{Any,AbstractArray}, s, a)
     end
     colsz = size(a,1)*sizeof(T)
     if N==1
