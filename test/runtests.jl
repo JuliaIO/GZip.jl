@@ -1,5 +1,3 @@
-using Compat
-import Compat: readstring
 using GZip
 using Base.Test
 
@@ -38,7 +36,7 @@ try
     first_char = data[1]
 
     gzfile = gzopen(test_compressed, "wb")
-    @test write(gzfile, data) == length(data.data)
+    @test write(gzfile, data) == sizeof(data)
     @test close(gzfile) == Z_OK
     @test close(gzfile) != Z_OK
 
@@ -62,7 +60,7 @@ try
 
     # Test peek
     gzfile = gzopen(test_compressed, "r")
-    @test peek(gzfile) == @compat UInt(first_char)
+    @test peek(gzfile) == UInt(first_char)
     readstring(gzfile)
     @test peek(gzfile) == -1
     close(gzfile)
@@ -73,7 +71,7 @@ try
     write(raw_file, zeros(UInt8, 10))
     close(raw_file)
 
-    @compat try
+    try
         gzopen(readstring, test_compressed)
         throw(ErrorException("Expecting ArgumentError or similar"))
     catch ex
@@ -85,7 +83,7 @@ try
     # test_group("gzip file function tests (writing)")
     ##########################
     gzfile = gzopen(test_compressed, "wb")
-    write(gzfile, data) == length(data.data)
+    write(gzfile, data) == sizeof(data)
     @test flush(gzfile) == Z_OK
 
     NEW = GZip.GZLIB_VERSION > "1.2.3.9"
@@ -104,8 +102,8 @@ try
     @test close(gzfile) == Z_OK
 
     gzopen(test_empty, "w") do io
-        a = "".data
-        @test gzwrite(io, pointer(a), length(a)*sizeof(eltype(a))) == @compat Int32(0)
+        a = UInt8[]
+        @test gzwrite(io, pointer(a), length(a)*sizeof(eltype(a))) == Int32(0)
     end
 
     ##########################
@@ -123,7 +121,7 @@ try
         end
         for level = 0:9
             gzfile = gzopen(test_compressed, "wb$level$ch")
-            @test write(gzfile, data) == length(data.data)
+            @test write(gzfile, data) == sizeof(data)
             @test close(gzfile) == Z_OK
 
             file_size = filesize(test_compressed)
@@ -131,11 +129,11 @@ try
             #println("wb$level$ch: ", file_size)
 
             if ch == 'T'
-                @test(file_size == length(data.data))
+                @test(file_size == sizeof(data))
             elseif level == 0
-                @test(file_size > length(data.data))
+                @test(file_size > sizeof(data))
             else
-                @test(file_size < length(data.data))
+                @test(file_size < sizeof(data))
             end
 
             # readline test
@@ -144,14 +142,14 @@ try
             while !eof(gzf)
                 write(s, readline(gzf))
             end
-            data2 = takebuf_string(s);
+            data2 = String(take!(s));
 
             # readuntil test
             seek(gzf, 0)
             while !eof(gzf)
                 write(s, readuntil(gzf, 'a'))
             end
-            data3 = takebuf_string(s);
+            data3 = String(take!(s));
             close(gzf)
 
             @test(data == data2)
