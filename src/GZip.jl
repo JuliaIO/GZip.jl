@@ -1,14 +1,11 @@
 ## gzip file io ##
-VERSION >= v"0.4.0-dev+6521" && __precompile__(true)
+__precompile__(true)
 
 module GZip
-
 using Compat
-import Compat: unsafe_convert, unsafe_string, String
-
 import Base: show, fd, close, flush, truncate, seek,
-             seekend, skip, position, eof, read, readall,
-             readline, write, peek
+             seekend, skip, position, eof, read, readstring,
+             readline, write, unsafe_write, peek
 
 export
   GZipStream,
@@ -27,9 +24,10 @@ export
   position,
   eof,
   read,
-  readall,
+  readstring,
   readline,
   write,
+  unsafe_write,
   peek,
 
 # lower-level io functions
@@ -112,7 +110,7 @@ type GZError <: Exception
     err::Int32
     err_str::AbstractString
 
-    GZError(e::Integer, str::AbstractString) = new(@compat(Int32(e)), str)
+    GZError(e::Integer, str::AbstractString) = new(Int32(e), str)
     GZError(e::Integer, s::GZipStream) = (a = gzerror(e, s); new(a[1], a[2]))
     GZError(s::GZipStream) = (a = gzerror(s); new(a[1], a[2]))
 end
@@ -178,23 +176,23 @@ gzungetc(c::Integer, s::GZipStream) =
 gzgets(s::GZipStream, a::Array{UInt8}) =
     @test_eof_gzerr2(s,
                      ccall((:gzgets, _zlib), Ptr{UInt8}, (Ptr{Void}, Ptr{UInt8}, Int32),
-                           s.gz_file, a, @compat(Int32(length(a)))),
+                           s.gz_file, a, Int32(length(a))),
                      C_NULL)
 
 gzgets(s::GZipStream, p::Ptr{UInt8}, len::Integer) =
     @test_eof_gzerr2(s,
                      ccall((:gzgets, _zlib), Ptr{UInt8}, (Ptr{Void}, Ptr{UInt8}, Int32),
-                           s.gz_file, p, @compat(Int32(len))),
+                           s.gz_file, p, Int32(len)),
                      C_NULL)
 
 gzputc(s::GZipStream, c::Integer) =
     @test_gzerror(s,
                   ccall((:gzputc, _zlib), Int32, (Ptr{Void}, Int32),
-                        s.gz_file, @compat(Int32(c))),
+                        s.gz_file, Int32(c)),
                   -1)
 
 gzwrite(s::GZipStream, p::Ptr, len::Integer) =
-    len == 0 ? @compat(Int32(0)) :
+    len == 0 ? Int32(0) :
                @test_gzerror0(s, ccall((:gzwrite, _zlib), Int32, (Ptr{Void}, Ptr{Void}, UInt32),
                                        s.gz_file, p, len))
 
@@ -212,7 +210,7 @@ let _zlib_h = Libdl.dlopen(_zlib)
         gzbuffer(gz_file::Ptr, gz_buf_size::Integer) =
            ccall((:gzbuffer, _zlib), Int32, (Ptr{Void}, UInt32), gz_file, gz_buf_size)
     else
-        gzbuffer(gz_file::Ptr, gz_buf_size::Integer) = @compat Int32(-1)
+        gzbuffer(gz_file::Ptr, gz_buf_size::Integer) = Int32(-1)
     end
 
     #####
@@ -318,7 +316,7 @@ function close(s::GZipStream)
 end
 
 flush(s::GZipStream, fl::Integer) =
-    @test_z_ok ccall((:gzflush, _zlib), Int32, (Ptr{Void}, Int32), s.gz_file, @compat(Int32(fl)))
+    @test_z_ok ccall((:gzflush, _zlib), Int32, (Ptr{Void}, Int32), s.gz_file, Int32(fl))
 flush(s::GZipStream) = flush(s, Z_SYNC_FLUSH)
 
 truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, Integer)))
@@ -352,7 +350,7 @@ position(s::GZipStream, raw::Bool=false) =
       ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
 end
 
-eof(s::GZipStream) = @compat Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
+eof(s::GZipStream) = Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
 
 function peek(s::GZipStream)
     c = gzgetc_raw(s)
@@ -378,7 +376,7 @@ function read{T}(s::GZipStream, a::Array{T})
         peek(s) # force eof to be set
         a
     else
-        @compat invoke(read, Tuple{IO,Array}, s, a)
+        invoke(read, Tuple{IO,Array}, s, a)
     end
 end
 
@@ -388,14 +386,14 @@ function read(s::GZipStream, ::Type{UInt8})
         throw(GZError(s))
     end
     peek(s) # force eof to be set
-    @compat UInt8(ret)
+    UInt8(ret)
 end
 
 
 # For this function, it's really unfortunate that zlib is
 # not integrated with ios
-function readall(s::GZipStream, bufsize::Int)
-    buf = @compat Array{UInt8}(bufsize)
+function readstring(s::GZipStream, bufsize::Int)
+    buf = Array{UInt8}(bufsize)
     len = 0
     while true
         ret = gzread(s, pointer(buf)+len, bufsize)
@@ -416,17 +414,17 @@ function readall(s::GZipStream, bufsize::Int)
             if length(buf) > len
                 resize!(buf, len)
             end
-            return @compat String(copy(buf))
+            return String(copy(buf))
         end
         len += ret
         # Grow the buffer so that bufsize bytes will fit
         resize!(buf, bufsize+len)
     end
 end
-readall(s::GZipStream) = readall(s, Z_BIG_BUFSIZE)
+readstring(s::GZipStream) = readstring(s, Z_BIG_BUFSIZE)
 
 function readline(s::GZipStream)
-    buf = @compat Array{UInt8}(GZ_LINE_BUFSIZE)
+    buf = Array{UInt8}(GZ_LINE_BUFSIZE)
     pos = 1
 
     if gzgets(s, buf) == C_NULL      # Throws an exception on error
@@ -436,13 +434,13 @@ function readline(s::GZipStream)
     while(true)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
         eos = search(buf, '\0', pos)
-        if eos == 1 || buf[eos-1] == @compat UInt8('\n')
-            return @compat String(copy(resize!(buf, eos-1)))
+        if eos == 1 || buf[eos-1] == UInt8('\n')
+            return String(copy(resize!(buf, eos-1)))
         end
 
         # If we're at the end of the file, return the string
         if eof(s)
-            return @compat String(copy(resize!(buf, eos-1)))
+            return String(copy(resize!(buf, eos-1)))
         end
 
         # Otherwise, append to the end of the previous buffer
@@ -455,26 +453,18 @@ function readline(s::GZipStream)
         # Read in the next chunk
         if gzgets(s, pointer(buf)+pos-1, GZ_LINE_BUFSIZE) == C_NULL
             # eof(s); remove extra buffer space
-            return @compat String(copy(resize!(buf, length(buf)-add_len)))
+            return String(copy(resize!(buf, length(buf)-add_len)))
         end
     end
 end
 
 write(s::GZipStream, b::UInt8) = gzputc(s, b)
-
-function write{T}(s::GZipStream, a::Array{T})
-    if isbits(T)
-        return gzwrite(s, pointer(a), length(a)*sizeof(T))
-    else
-        @compat invoke(write, Tuple{Any,Array}, s, a)
-    end
-end
 write(s::GZipStream, a::Array{UInt8}) = gzwrite(s, pointer(a), sizeof(a))
-write(s::GZipStream, p::Ptr, nb::Integer) = gzwrite(s, p, nb)
+unsafe_write(s::GZipStream, p::Ptr{UInt8}, nb::UInt) = gzwrite(s, p, nb)
 
 function write{T,N}(s::GZipStream, a::SubArray{T,N,Array})
     if !isbits(T) || stride(a,1)!=1
-        return @compat invoke(write, Tuple{Any,AbstractArray}, s, a)
+        return invoke(write, Tuple{Any,AbstractArray}, s, a)
     end
     colsz = size(a,1)*sizeof(T)
     if N==1
