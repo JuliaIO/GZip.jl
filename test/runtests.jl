@@ -53,6 +53,7 @@ try
     # Test gzfdio
     raw_file = open(test_compressed, "r")
     gzfile = gzdopen(fd(raw_file), "r")
+    @test nb_available(gzfile) > 0
     data4 = readstring(gzfile)
     close(gzfile)
     close(raw_file)
@@ -60,9 +61,11 @@ try
 
     # Test peek
     gzfile = gzopen(test_compressed, "r")
+    @test nb_available(gzfile) > 0
     @test peek(gzfile) == UInt(first_char)
     readstring(gzfile)
     @test peek(gzfile) == -1
+    @test nb_available(gzfile) == 0
     close(gzfile)
 
     # Screw up the file
@@ -164,6 +167,7 @@ try
     @test close(gzfile) == Z_OK
     gzfile = gzopen(test_compressed, "r")
     @test eof(gzfile) == true
+    @test nb_available(gzfile) == 0
     @test close(gzfile) == Z_OK
 
     ##########################
