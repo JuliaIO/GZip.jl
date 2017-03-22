@@ -82,9 +82,9 @@ const SEEK_CUR =  Int32(1)
 const zlib_compile_flags = ccall((:zlibCompileFlags, _zlib), UInt, ())
 const z_off_t_sz = 2 << ((zlib_compile_flags >> 6) & UInt(3))
 if (z_off_t_sz == 8 || Libdl.dlsym_e(Libdl.dlopen(_zlib), :gzopen64) != C_NULL)
-    typealias ZFileOffset Int64
+    const ZFileOffset = Int64
 elseif z_off_t_sz == 4
-    typealias ZFileOffset Int32
+    const ZFileOffset = Int32
 else
     error("Can't figure out what to do with ZFileOffset. sizeof(z_off_t) = ", z_off_t_sz)
 end
