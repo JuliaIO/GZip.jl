@@ -475,4 +475,18 @@ function write{T,N}(s::GZipStream, a::SubArray{T,N,Array})
     end
 end
 
+## Deprecations
+
+if isdefined(Base, :readall)
+    import Base: readall
+    function Base.readall(s::GZipStream, bufsize::Int)
+        Base.depwarn("readall is deprecated; use readstring instead.", :readall)
+        return readstring(s, bufsize)
+    end
+    function Base.readall(s::GZipStream)
+        Base.depwarn("readall is deprecated; use readstring instead.", :readall)
+        return readstring(s)
+    end
+end
+
 end # module GZip
