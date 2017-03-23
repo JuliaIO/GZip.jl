@@ -5,7 +5,7 @@ module GZip
 using Compat
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read, readstring,
-             readline, write, unsafe_write, peek
+             readline, write, unsafe_write, peek, nb_available
 
 export
   GZipStream,
@@ -351,6 +351,8 @@ position(s::GZipStream, raw::Bool=false) =
 end
 
 eof(s::GZipStream) = Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
+
+nb_available(s::GZipStream) = eof(s) ? 0 : 1 # FIXME return the number of buffered bytes
 
 function peek(s::GZipStream)
     c = gzgetc_raw(s)
