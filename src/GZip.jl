@@ -335,6 +335,12 @@ function seek(s::GZipStream, n::Integer)
         error("seek (gzseek) failed")
 end
 
+function seekend(s::GZipStream)
+    seek(s, 0)
+    indmax(eachline(s))
+    return s
+end
+
 # Note: skips bytes within uncompressed data stream
 skip(s::GZipStream, n::Integer) =
     (ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Void}, ZFileOffset, Int32),
