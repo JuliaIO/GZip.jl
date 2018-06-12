@@ -1,8 +1,10 @@
 # general zlib constants, definitions
 
-if is_unix()
+using Compat.Sys: isunix, iswindows
+
+@static if isunix()
     const _zlib = "libz"
-elseif is_windows()
+elseif iswindows()
     const _zlib = "zlib1"
 end
 
@@ -34,7 +36,7 @@ const Z_VERSION_ERROR  =  Int32(-6)
 
 # Zlib errors as Exceptions
 zerror(e::Integer) =  unsafe_string(ccall((:zError, _zlib), Ptr{UInt8}, (Int32,), e))
-type ZError <: Exception
+mutable struct ZError <: Exception
     err::Int32
     err_str::AbstractString
 

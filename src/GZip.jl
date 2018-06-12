@@ -3,6 +3,8 @@ __precompile__(true)
 
 module GZip
 using Compat
+using Compat.Sys: iswindows
+using Compat.Libdl
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read, readstring,
              readline, write, unsafe_write, peek
@@ -80,23 +82,26 @@ const GZLIB_VERSION = unsafe_string(ccall((:zlibVersion, GZip._zlib), Ptr{UInt8}
 const GZ_LINE_BUFSIZE = 256
 
 # Wrapper around gzFile
-type GZipStream <: IO
+mutable struct GZipStream <: IO
     name::AbstractString
-    gz_file::Ptr{Void}
+    gz_file::Ptr{Nothing}
     buf_size::Int
 
     _closed::Bool
 
-    GZipStream(name::AbstractString, gz_file::Ptr{Void}, buf_size::Int) =
-        (x = new(name, gz_file, buf_size, false); finalizer(x, close); x)
+    function GZipStream(name::AbstractString, gz_file::Ptr{Nothing}, buf_size::Int)
+        x = new(name, gz_file, buf_size, false)
+        VERSION ≥ v"0.7.0-DEV.2562" ? finalizer(close, x) : finalizer(x, close)
+        x
+    end
 end
-GZipStream(name::AbstractString, gz_file::Ptr{Void}) = GZipStream(name, gz_file, Z_DEFAULT_BUFSIZE)
+GZipStream(name::AbstractString, gz_file::Ptr{Nothing}) = GZipStream(name, gz_file, Z_DEFAULT_BUFSIZE)
 
 # gzerror
 function gzerror(err::Integer, s::GZipStream)
     e = Int32[err]
     if !s._closed
-        msg_p = ccall((:gzerror, _zlib), Ptr{UInt8}, (Ptr{Void}, Ptr{Int32}),
+        msg_p = ccall((:gzerror, _zlib), Ptr{UInt8}, (Ptr{Nothing}, Ptr{Int32}),
                       s.gz_file, e)
         msg = (msg_p == C_NULL ? "" : unsafe_string(msg_p))
     else
@@ -106,7 +111,7 @@ function gzerror(err::Integer, s::GZipStream)
 end
 gzerror(s::GZipStream) = gzerror(0, s)
 
-type GZError <: Exception
+mutable struct GZError <: Exception
     err::Int32
     err_str::AbstractString
 
@@ -166,39 +171,39 @@ end
 
 # Easy access to gz reading/writing functions (Internal)
 gzgetc(s::GZipStream) =
-    @test_eof_gzerr(s, ccall((:gzgetc, _zlib), Int32, (Ptr{Void},), s.gz_file), -1)
+    @test_eof_gzerr(s, ccall((:gzgetc, _zlib), Int32, (Ptr{Nothing},), s.gz_file), -1)
 
-gzgetc_raw(s::GZipStream) = ccall((:gzgetc, _zlib), Int32, (Ptr{Void},), s.gz_file)
+gzgetc_raw(s::GZipStream) = ccall((:gzgetc, _zlib), Int32, (Ptr{Nothing},), s.gz_file)
 
 gzungetc(c::Integer, s::GZipStream) =
-    @test_eof_gzerr(s, ccall((:gzungetc, _zlib), Int32, (Int32, Ptr{Void}), c, s.gz_file), -1)
+    @test_eof_gzerr(s, ccall((:gzungetc, _zlib), Int32, (Int32, Ptr{Nothing}), c, s.gz_file), -1)
 
 gzgets(s::GZipStream, a::Array{UInt8}) =
     @test_eof_gzerr2(s,
-                     ccall((:gzgets, _zlib), Ptr{UInt8}, (Ptr{Void}, Ptr{UInt8}, Int32),
+                     ccall((:gzgets, _zlib), Ptr{UInt8}, (Ptr{Nothing}, Ptr{UInt8}, Int32),
                            s.gz_file, a, Int32(length(a))),
                      C_NULL)
 
 gzgets(s::GZipStream, p::Ptr{UInt8}, len::Integer) =
     @test_eof_gzerr2(s,
-                     ccall((:gzgets, _zlib), Ptr{UInt8}, (Ptr{Void}, Ptr{UInt8}, Int32),
+                     ccall((:gzgets, _zlib), Ptr{UInt8}, (Ptr{Nothing}, Ptr{UInt8}, Int32),
                            s.gz_file, p, Int32(len)),
                      C_NULL)
 
 gzputc(s::GZipStream, c::Integer) =
     @test_gzerror(s,
-                  ccall((:gzputc, _zlib), Int32, (Ptr{Void}, Int32),
+                  ccall((:gzputc, _zlib), Int32, (Ptr{Nothing}, Int32),
                         s.gz_file, Int32(c)),
                   -1)
 
 gzwrite(s::GZipStream, p::Ptr, len::Integer) =
     len == 0 ? Int32(0) :
-               @test_gzerror0(s, ccall((:gzwrite, _zlib), Int32, (Ptr{Void}, Ptr{Void}, UInt32),
+               @test_gzerror0(s, ccall((:gzwrite, _zlib), Int32, (Ptr{Nothing}, Ptr{Nothing}, UInt32),
                                        s.gz_file, p, len))
 
 gzread(s::GZipStream, p::Ptr, len::Integer) =
     @test_gzerror(s,
-                  ccall((:gzread, _zlib), Int32, (Ptr{Void}, Ptr{Void}, UInt32),
+                  ccall((:gzread, _zlib), Int32, (Ptr{Nothing}, Ptr{Nothing}, UInt32),
                         s.gz_file, p, len),
                   -1)
 
@@ -208,7 +213,7 @@ let _zlib_h = Libdl.dlopen(_zlib)
     # Doesn't exist in zlib 1.2.3 or earlier
     if Libdl.dlsym_e(_zlib_h, :gzbuffer) != C_NULL
         gzbuffer(gz_file::Ptr, gz_buf_size::Integer) =
-           ccall((:gzbuffer, _zlib), Int32, (Ptr{Void}, UInt32), gz_file, gz_buf_size)
+           ccall((:gzbuffer, _zlib), Int32, (Ptr{Nothing}, UInt32), gz_file, gz_buf_size)
     else
         gzbuffer(gz_file::Ptr, gz_buf_size::Integer) = Int32(-1)
     end
@@ -245,7 +250,7 @@ function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Inte
         gzmode *= "b"
     end
 
-    gz_file = ccall((_gzopen, _zlib), Ptr{Void}, (Ptr{UInt8}, Ptr{UInt8}), fname, gzmode)
+    gz_file = ccall((_gzopen, _zlib), Ptr{Nothing}, (Ptr{UInt8}, Ptr{UInt8}), fname, gzmode)
     if gz_file == C_NULL
         throw(GZError(-1, "gzopen failed"))
     end
@@ -279,7 +284,7 @@ function gzdopen(name::AbstractString, fd::Integer, gzmode::AbstractString, gz_b
     # not to close the original fd
     dup_fd = ccall(:dup, Int32, (Int32,), fd)
 
-    gz_file = ccall((:gzdopen, _zlib), Ptr{Void}, (Int32, Ptr{UInt8}), dup_fd, gzmode)
+    gz_file = ccall((:gzdopen, _zlib), Ptr{Nothing}, (Int32, Ptr{UInt8}), dup_fd, gzmode)
     if gz_file == C_NULL
         throw(GZError(-1, "gzdopen failed"))
     end
@@ -310,13 +315,13 @@ function close(s::GZipStream)
 
     s.name *= " (closed)"
 
-    ret = (@test_z_ok ccall((:gzclose, _zlib), Int32, (Ptr{Void},), s.gz_file))
+    ret = (@test_z_ok ccall((:gzclose, _zlib), Int32, (Ptr{Nothing},), s.gz_file))
 
     return ret
 end
 
 flush(s::GZipStream, fl::Integer) =
-    @test_z_ok ccall((:gzflush, _zlib), Int32, (Ptr{Void}, Int32), s.gz_file, Int32(fl))
+    @test_z_ok ccall((:gzflush, _zlib), Int32, (Ptr{Nothing}, Int32), s.gz_file, Int32(fl))
 flush(s::GZipStream) = flush(s, Z_SYNC_FLUSH)
 
 truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, Integer)))
@@ -324,33 +329,33 @@ truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, I
 # Note: seeks to byte position within uncompressed data stream
 function seek(s::GZipStream, n::Integer)
     # Note: band-aid to avoid a bug occurring on uncompressed files under Windows
-    @static if is_windows()
-        if (ccall((_gzdirect, _zlib), Cint, (Ptr{Void},), s.gz_file)) == 1
-            ccall((_gzrewind, _zlib), Cint, (Ptr{Void},), s.gz_file)!=-1 ||
+    @static if iswindows()
+        if (ccall((_gzdirect, _zlib), Cint, (Ptr{Nothing},), s.gz_file)) == 1
+            ccall((_gzrewind, _zlib), Cint, (Ptr{Nothing},), s.gz_file)!=-1 ||
                 error("seek (gzseek) failed")
         end
     end
-    ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Void}, ZFileOffset, Int32),
+    ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Nothing}, ZFileOffset, Int32),
            s.gz_file, n, SEEK_SET)!=-1 || # Mimick behavior of seek(s::IOStream, n)
         error("seek (gzseek) failed")
 end
 
 # Note: skips bytes within uncompressed data stream
 skip(s::GZipStream, n::Integer) =
-    (ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Void}, ZFileOffset, Int32),
+    (ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Nothing}, ZFileOffset, Int32),
            s.gz_file, n, SEEK_CUR)!=-1 ||
      error("skip (gzseek) failed")) # Mimick behavior of skip(s::IOStream, n)
 
 if GZLIB_VERSION > "1.2.3.9"
 position(s::GZipStream, raw::Bool=false) = raw ?
-    ccall((_gzoffset, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file) :
-      ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+    ccall((_gzoffset, _zlib), ZFileOffset, (Ptr{Nothing},), s.gz_file) :
+      ccall((_gztell, _zlib), ZFileOffset, (Ptr{Nothing},), s.gz_file)
 else
 position(s::GZipStream, raw::Bool=false) =
-      ccall((_gztell, _zlib), ZFileOffset, (Ptr{Void},), s.gz_file)
+      ccall((_gztell, _zlib), ZFileOffset, (Ptr{Nothing},), s.gz_file)
 end
 
-eof(s::GZipStream) = Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Void},), s.gz_file))
+eof(s::GZipStream) = Bool(ccall((:gzeof, _zlib), Int32, (Ptr{Nothing},), s.gz_file))
 
 function peek(s::GZipStream)
     c = gzgetc_raw(s)
@@ -361,12 +366,12 @@ function peek(s::GZipStream)
 end
 
 # Mimics read(s::IOStream, a::Array{T})
-function read{T}(s::GZipStream, a::Array{T})
+function read(s::GZipStream, a::Array{T}) where {T}
     if isbits(T)
         nb = length(a)*sizeof(T)
         # Note: this will overflow and succeed without warning if nb > 4GB
         ret = ccall((:gzread, _zlib), Int32,
-                    (Ptr{Void}, Ptr{Void}, UInt32), s.gz_file, a, nb)
+                    (Ptr{Nothing}, Ptr{Nothing}, UInt32), s.gz_file, a, nb)
         if ret == -1
             throw(GZError(s))
         end
@@ -424,7 +429,7 @@ end
 readstring(s::GZipStream) = readstring(s, Z_BIG_BUFSIZE)
 
 function readline(s::GZipStream)
-    buf = Array{UInt8}(GZ_LINE_BUFSIZE)
+    buf = Array{UInt8}(undef, GZ_LINE_BUFSIZE)
     pos = 1
 
     if gzgets(s, buf) == C_NULL      # Throws an exception on error
@@ -433,7 +438,9 @@ function readline(s::GZipStream)
 
     while(true)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
-        eos = search(buf, '\0', pos)
+        # eos = search(buf, '\0', pos)
+        eos = findnext(x->x==UInt8('\0'), buf, pos)::Int
+        # @assert eos ≢ nothing
         if eos == 1 || buf[eos-1] == UInt8('\n')
             return String(copy(resize!(buf, eos-1)))
         end
@@ -462,7 +469,7 @@ write(s::GZipStream, b::UInt8) = gzputc(s, b)
 write(s::GZipStream, a::Array{UInt8}) = gzwrite(s, pointer(a), sizeof(a))
 unsafe_write(s::GZipStream, p::Ptr{UInt8}, nb::UInt) = gzwrite(s, p, nb)
 
-function write{T,N}(s::GZipStream, a::SubArray{T,N,Array})
+function write(s::GZipStream, a::SubArray{T,N,Array}) where {T,N}
     if !isbits(T) || stride(a,1)!=1
         return invoke(write, Tuple{Any,AbstractArray}, s, a)
     end
