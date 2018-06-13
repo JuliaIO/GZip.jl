@@ -5,6 +5,7 @@ module GZip
 using Compat
 using Compat.Sys: iswindows
 using Compat.Libdl
+using Base.Libc
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read, readstring,
              readline, write, unsafe_write, peek
@@ -282,7 +283,7 @@ function gzdopen(name::AbstractString, fd::Integer, gzmode::AbstractString, gz_b
 
     # Duplicate the file descriptor, since we have no way to tell gzclose()
     # not to close the original fd
-    dup_fd = ccall(:dup, Int32, (Int32,), fd)
+    dup_fd = Libc.dup(Libc.RawFD(fd))
 
     gz_file = ccall((:gzdopen, _zlib), Ptr{Nothing}, (Int32, Ptr{UInt8}), dup_fd, gzmode)
     if gz_file == C_NULL
