@@ -223,7 +223,7 @@ let _zlib_h = Libdl.dlopen(_zlib)
 
     # Use 64-bit functions if available
 
-    if Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL
+    if Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL && (z_off_t_sz == 8 || !iswindows())
         const _gzopen = :gzopen64
         const _gzseek = :gzseek64
         const _gztell = :gztell64
@@ -337,7 +337,7 @@ function seek(s::GZipStream, n::Integer)
         end
     end
     ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Nothing}, ZFileOffset, Int32),
-           s.gz_file, n, SEEK_SET)!=-1 || # Mimick behavior of seek(s::IOStream, n)
+           s.gz_file, n, SEEK_SET)!=-1 || # Mimic behavior of seek(s::IOStream, n)
         error("seek (gzseek) failed")
 end
 
@@ -345,7 +345,7 @@ end
 skip(s::GZipStream, n::Integer) =
     (ccall((_gzseek, _zlib), ZFileOffset, (Ptr{Nothing}, ZFileOffset, Int32),
            s.gz_file, n, SEEK_CUR)!=-1 ||
-     error("skip (gzseek) failed")) # Mimick behavior of skip(s::IOStream, n)
+     error("skip (gzseek) failed")) # Mimic behavior of skip(s::IOStream, n)
 
 if GZLIB_VERSION > "1.2.3.9"
 position(s::GZipStream, raw::Bool=false) = raw ?
