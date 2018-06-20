@@ -22,7 +22,7 @@ Typical usage would be something like
 import GZip
 
 fh = GZip.open("infile.gz")
-readline(fh, s)
+s = readline(fh)
 ...
 close(fh)
 
