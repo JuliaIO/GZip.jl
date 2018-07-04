@@ -1,5 +1,13 @@
 using GZip
-using Base.Test
+using Compat
+using Compat.Test
+using Compat.Sys: isunix, iswindows
+
+@static if VERSION < v"0.7.0-DEV.3510"
+    readuntilkeep(args...) = readuntil(args...)
+else
+    readuntilkeep(args...) = readuntil(args...; keep = true)
+end
 
 ##########################
 # test_context("GZip tests")
@@ -13,16 +21,17 @@ test_infile = @__FILE__
 test_compressed = joinpath(tmp, "runtests.jl.gz")
 test_empty = joinpath(tmp, "empty.jl.gz")
 
-if is_windows()
+@static if iswindows()
     gunzip = "gunzip.exe"
-elseif is_unix()
+elseif isunix()
     gunzip = "gunzip"
 end
 
 test_gunzip = true
 try
-    run(pipeline(`which $gunzip`, DevNull))
+    run(pipeline(`which $gunzip`, devnull))
 catch
+    global test_gunzip
     test_gunzip = false
 end
 
@@ -31,7 +40,7 @@ try
     # test_group("Compress Test1: gzip.jl")
     ##########################
 
-    data = open(readstring, test_infile);
+    data = open(x->read(x, String), test_infile);
 
     first_char = data[1]
 
@@ -43,17 +52,17 @@ try
     @test_throws EOFError write(gzfile, data)
 
     if test_gunzip
-        data2 = readstring(`$gunzip -c $test_compressed`)
+        data2 = read(`$gunzip -c $test_compressed`, String)
         @test data == data2
     end
 
-    data3 = gzopen(readstring, test_compressed)
+    data3 = gzopen(x->read(x, String), test_compressed)
     @test data == data3
 
     # Test gzfdio
     raw_file = open(test_compressed, "r")
     gzfile = gzdopen(fd(raw_file), "r")
-    data4 = readstring(gzfile)
+    data4 = read(gzfile, String)
     close(gzfile)
     close(raw_file)
     @test data == data4
@@ -61,7 +70,7 @@ try
     # Test peek
     gzfile = gzopen(test_compressed, "r")
     @test peek(gzfile) == UInt(first_char)
-    readstring(gzfile)
+    read(gzfile, String)
     @test peek(gzfile) == -1
     close(gzfile)
 
@@ -72,7 +81,7 @@ try
     close(raw_file)
 
     try
-        gzopen(readstring, test_compressed)
+        gzopen(x->read(x, String), test_compressed)
         throw(ErrorException("Expecting ArgumentError or similar"))
     catch ex
         @test typeof(ex) <: Union{ArgumentError,ZError,GZError} ||
@@ -147,7 +156,7 @@ try
             # readuntil test
             seek(gzf, 0)
             while !eof(gzf)
-                write(s, readuntil(gzf, 'a'))
+                write(s, readuntilkeep(gzf, 'a'))
             end
             data3 = String(take!(s));
             close(gzf)
@@ -173,7 +182,7 @@ try
     let BUFSIZE = 65536
         for level = 0:3:6
             for T in [Int8,UInt8,Int16,UInt16,Int32,UInt32,Int64,UInt64,Int128,UInt128,
-                      Float32,Float64,Complex64,Complex128]
+                      Float32,Float64,ComplexF32,ComplexF64]
 
                 minval = 34567
                 try
@@ -197,9 +206,9 @@ try
                 # Random array
                 if isa(T, AbstractFloat)
                     r = (T)[rand(BUFSIZE)...];
-                elseif isa(T, Complex64)
+                elseif isa(T, ComplexF32)
                     r = Int32[rand(BUFSIZE)...] + Int32[rand(BUFSIZE)...] * im
-                elseif isa(T, Complex128)
+                elseif isa(T, ComplexF64)
                     r = Int64[rand(BUFSIZE)...] + Int64[rand(BUFSIZE)...] * im
                 else
                     r = b[rand(1:BUFSIZE, BUFSIZE)];
