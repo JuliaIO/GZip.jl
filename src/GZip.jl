@@ -92,7 +92,7 @@ mutable struct GZipStream <: IO
 
     function GZipStream(name::AbstractString, gz_file::Ptr{Cvoid}, buf_size::Int)
         x = new(name, gz_file, buf_size, false)
-        VERSION ≥ v"0.7.0-DEV.2562" ? finalizer(close, x) : finalizer(x, close)
+        @compat finalizer(close, x)
         x
     end
 end
