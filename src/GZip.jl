@@ -1,10 +1,8 @@
 ## gzip file io ##
-__precompile__(true)
-
 module GZip
 using Compat
 using Compat.Sys: iswindows
-using Compat.Libdl
+using Libdl
 using Base.Libc
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read, readstring,
@@ -92,7 +90,7 @@ mutable struct GZipStream <: IO
 
     function GZipStream(name::AbstractString, gz_file::Ptr{Cvoid}, buf_size::Int)
         x = new(name, gz_file, buf_size, false)
-        @compat finalizer(close, x)
+        finalizer(close, x)
         x
     end
 end
@@ -224,18 +222,18 @@ let _zlib_h = Libdl.dlopen(_zlib)
     # Use 64-bit functions if available
 
     if Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL && (z_off_t_sz == 8 || !iswindows())
-        const _gzopen = :gzopen64
-        const _gzseek = :gzseek64
-        const _gztell = :gztell64
-        const _gzoffset = :gzoffset64
+        _gzopen = :gzopen64
+        _gzseek = :gzseek64
+        _gztell = :gztell64
+        _gzoffset = :gzoffset64
     else
-        const _gzopen = :gzopen
-        const _gzseek = :gzseek
-        const _gztell = :gztell
-        const _gzoffset = :gzoffset
+        _gzopen = :gzopen
+        _gzseek = :gzseek
+        _gztell = :gztell
+        _gzoffset = :gzoffset
     end
-    const _gzrewind = :gzrewind
-    const _gzdirect = :gzdirect
+    _gzrewind = :gzrewind
+    _gzdirect = :gzdirect
 end
 
 function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Integer)
@@ -427,7 +425,7 @@ function readstring(s::GZipStream, bufsize::Int)
         resize!(buf, bufsize+len)
     end
 end
-readstring(s::GZipStream) = readstring(s, Z_BIG_BUFSIZE)
+read(s::GZipStream, String) = readstring(s, Z_BIG_BUFSIZE)
 
 function readline(s::GZipStream)
     buf = Array{UInt8}(undef, GZ_LINE_BUFSIZE)
@@ -493,7 +491,7 @@ if isdefined(Base, :readall)
     end
     function Base.readall(s::GZipStream)
         Base.depwarn("readall is deprecated; use readstring instead.", :readall)
-        return readstring(s)
+        return read(s, String)
     end
 end
 
