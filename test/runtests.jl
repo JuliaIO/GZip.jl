@@ -1,13 +1,9 @@
 using GZip
 using Compat
-using Compat.Test
+using Test
 using Compat.Sys: isunix, iswindows
 
-@static if VERSION < v"0.7.0-DEV.3510"
-    readuntilkeep(args...) = readuntil(args...)
-else
-    readuntilkeep(args...) = readuntil(args...; keep = true)
-end
+readuntilkeep(args...) = readuntil(args...; keep = true)
 
 ##########################
 # test_context("GZip tests")
