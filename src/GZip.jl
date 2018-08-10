@@ -7,7 +7,7 @@ using Compat.Sys: iswindows
 using Compat.Libdl
 using Base.Libc
 import Base: show, fd, close, flush, truncate, seek,
-             seekend, skip, position, eof, read, readstring,
+             seekend, skip, position, eof, read,
              readline, write, unsafe_write, peek
 
 export
@@ -27,7 +27,6 @@ export
   position,
   eof,
   read,
-  readstring,
   readline,
   write,
   unsafe_write,
@@ -398,8 +397,8 @@ end
 
 # For this function, it's really unfortunate that zlib is
 # not integrated with ios
-function readstring(s::GZipStream, bufsize::Int)
-    buf = Array{UInt8}(bufsize)
+function read(s::GZipStream, ::Type{String}; bufsize::Int = Z_BIG_BUFSIZE)
+    buf = Array{UInt8}(undef, bufsize)
     len = 0
     while true
         ret = gzread(s, pointer(buf)+len, bufsize)
@@ -427,7 +426,6 @@ function readstring(s::GZipStream, bufsize::Int)
         resize!(buf, bufsize+len)
     end
 end
-readstring(s::GZipStream) = readstring(s, Z_BIG_BUFSIZE)
 
 function readline(s::GZipStream)
     buf = Array{UInt8}(undef, GZ_LINE_BUFSIZE)
@@ -480,20 +478,6 @@ function write(s::GZipStream, a::SubArray{T,N,Array}) where {T,N}
     else
         cartesian_map((idxs...)->write(s, pointer(a, idxs), colsz),
                       tuple(1, size(a)[2:end]...))
-    end
-end
-
-## Deprecations
-
-if isdefined(Base, :readall)
-    import Base: readall
-    function Base.readall(s::GZipStream, bufsize::Int)
-        Base.depwarn("readall is deprecated; use readstring instead.", :readall)
-        return readstring(s, bufsize)
-    end
-    function Base.readall(s::GZipStream)
-        Base.depwarn("readall is deprecated; use readstring instead.", :readall)
-        return readstring(s)
     end
 end
 
