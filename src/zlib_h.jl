@@ -1,10 +1,8 @@
 # general zlib constants, definitions
 
-using Compat.Sys: isunix, iswindows
-
-@static if isunix()
+@static if Sys.isunix()
     const _zlib = "libz"
-elseif iswindows()
+elseif Sys.iswindows()
     const _zlib = "zlib1"
 end
 

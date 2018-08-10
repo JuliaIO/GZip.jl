@@ -1,10 +1,6 @@
 ## gzip file io ##
-__precompile__(true)
-
 module GZip
-using Compat
-using Compat.Sys: iswindows
-using Compat.Libdl
+using Libdl
 using Base.Libc
 import Base: show, fd, close, flush, truncate, seek,
              seekend, skip, position, eof, read,
@@ -91,7 +87,7 @@ mutable struct GZipStream <: IO
 
     function GZipStream(name::AbstractString, gz_file::Ptr{Cvoid}, buf_size::Int)
         x = new(name, gz_file, buf_size, false)
-        @compat finalizer(close, x)
+        finalizer(close, x)
         x
     end
 end
@@ -222,7 +218,7 @@ let _zlib_h = Libdl.dlopen(_zlib)
 
     # Use 64-bit functions if available
 
-    if Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL && (z_off_t_sz == 8 || !iswindows())
+    if Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL && (z_off_t_sz == 8 || !Sys.iswindows())
         const _gzopen = :gzopen64
         const _gzseek = :gzseek64
         const _gztell = :gztell64
@@ -329,7 +325,7 @@ truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, I
 # Note: seeks to byte position within uncompressed data stream
 function seek(s::GZipStream, n::Integer)
     # Note: band-aid to avoid a bug occurring on uncompressed files under Windows
-    @static if iswindows()
+    @static if Sys.iswindows()
         if (ccall((_gzdirect, _zlib), Cint, (Ptr{Cvoid},), s.gz_file)) == 1
             ccall((_gzrewind, _zlib), Cint, (Ptr{Cvoid},), s.gz_file)!=-1 ||
                 error("seek (gzseek) failed")
@@ -381,7 +377,7 @@ function read(s::GZipStream, a::Array{T}) where {T}
         peek(s) # force eof to be set
         a
     else
-        invoke(read, Tuple{IO,Array}, s, a)
+        invoke(read!, Tuple{IO,Array}, s, a)
     end
 end
 

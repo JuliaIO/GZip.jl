@@ -1,13 +1,5 @@
 using GZip
-using Compat
-using Compat.Test
-using Compat.Sys: isunix, iswindows
-
-@static if VERSION < v"0.7.0-DEV.3510"
-    readuntilkeep(args...) = readuntil(args...)
-else
-    readuntilkeep(args...) = readuntil(args...; keep = true)
-end
+using Test
 
 ##########################
 # test_context("GZip tests")
@@ -21,9 +13,9 @@ test_infile = @__FILE__
 test_compressed = joinpath(tmp, "runtests.jl.gz")
 test_empty = joinpath(tmp, "empty.jl.gz")
 
-@static if iswindows()
+@static if Sys.iswindows()
     gunzip = "gunzip.exe"
-elseif isunix()
+elseif Sys.isunix()
     gunzip = "gunzip"
 end
 
@@ -156,7 +148,7 @@ try
             # readuntil test
             seek(gzf, 0)
             while !eof(gzf)
-                write(s, readuntilkeep(gzf, 'a'))
+                write(s, readuntil(gzf, 'a'; keep=true))
             end
             data3 = String(take!(s));
             close(gzf)
