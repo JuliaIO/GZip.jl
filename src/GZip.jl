@@ -219,18 +219,18 @@ let _zlib_h = Libdl.dlopen(_zlib)
     # Use 64-bit functions if available
 
     if Libdl.dlsym_e(_zlib_h, :gzopen64) != C_NULL && (z_off_t_sz == 8 || !Sys.iswindows())
-        const _gzopen = :gzopen64
-        const _gzseek = :gzseek64
-        const _gztell = :gztell64
-        const _gzoffset = :gzoffset64
+        _gzopen = :gzopen64
+        _gzseek = :gzseek64
+        _gztell = :gztell64
+        _gzoffset = :gzoffset64
     else
-        const _gzopen = :gzopen
-        const _gzseek = :gzseek
-        const _gztell = :gztell
-        const _gzoffset = :gzoffset
+        _gzopen = :gzopen
+        _gzseek = :gzseek
+        _gztell = :gztell
+        _gzoffset = :gzoffset
     end
-    const _gzrewind = :gzrewind
-    const _gzdirect = :gzdirect
+    _gzrewind = :gzrewind
+    _gzdirect = :gzdirect
 end
 
 function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Integer)
