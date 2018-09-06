@@ -363,7 +363,7 @@ end
 
 # Mimics read(s::IOStream, a::Array{T})
 function read(s::GZipStream, a::Array{T}) where {T}
-    if isbits(T)
+    if isbitstype(T)
         nb = length(a)*sizeof(T)
         # Note: this will overflow and succeed without warning if nb > 4GB
         ret = ccall((:gzread, _zlib), Int32,
@@ -465,7 +465,7 @@ write(s::GZipStream, a::Array{UInt8}) = gzwrite(s, pointer(a), sizeof(a))
 unsafe_write(s::GZipStream, p::Ptr{UInt8}, nb::UInt) = gzwrite(s, p, nb)
 
 function write(s::GZipStream, a::SubArray{T,N,Array}) where {T,N}
-    if !isbits(T) || stride(a,1)!=1
+    if !isbitstype(T) || stride(a,1)!=1
         return invoke(write, Tuple{Any,AbstractArray}, s, a)
     end
     colsz = size(a,1)*sizeof(T)
