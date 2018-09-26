@@ -6,6 +6,13 @@ elseif Sys.iswindows()
     const _zlib = "zlib1"
 end
 
+# Check whether _zlib library is available
+
+import Libdl
+if Libdl.find_library(_zlib) == ""
+    @error("$_zlib library not found in path.")
+end
+
 # Constants
 
 zlib_version =  unsafe_string(ccall((:zlibVersion, _zlib), Ptr{UInt8}, ()))
