@@ -1,9 +1,11 @@
 # general zlib constants, definitions
 
-@static if Sys.isunix()
-    const _zlib = "libz"
-elseif Sys.iswindows()
+@static if Sys.iswindows() && VERSION < v"1.3.0-rc2.9"
+    # The name of the binary for Windows changed with
+    # https://github.com/JuliaLang/julia/pull/33125
     const _zlib = "zlib1"
+else
+    const _zlib = "libz"
 end
 
 # Constants
