@@ -1,16 +1,9 @@
 # GZip.jl: A Julia interface for gzip functions in zlib
 
-[![GZip](http://pkg.julialang.org/badges/GZip_0.6.svg)](http://pkg.julialang.org/?pkg=GZip)
-[![GZip](http://pkg.julialang.org/badges/GZip_0.7.svg)](http://pkg.julialang.org/?pkg=GZip)
-[![Build Status](https://travis-ci.org/JuliaIO/GZip.jl.svg?branch=master)](https://travis-ci.org/JuliaIO/GZip.jl)
-[![Coverage Status](https://coveralls.io/repos/JuliaIO/GZip.jl/badge.svg)](https://coveralls.io/r/JuliaIO/GZip.jl)
-
 This module provides a wrapper for the gzip related functions of
 [zlib](http://zlib.net), a free, general-purpose, legally
 unencumbered, lossless data-compression library. These functions
 allow the reading and writing of gzip files.
-
-Install with `Pkg.add("GZip")` at the Julia prompt.
 
 Usage
 -----
