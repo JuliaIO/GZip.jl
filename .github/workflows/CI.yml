@@ -64,9 +64,9 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using Gzip
-            DocMeta.setdocmeta!(Gzip, :DocTestSetup, :(using Gzip); recursive=true)
-            doctest(Gzip)'
+            using GZip
+            DocMeta.setdocmeta!(GZip, :DocTestSetup, :(using GZip); recursive=true)
+            doctest(GZip)'
       - run: julia --project=docs docs/make.jl
         env:
           JULIA_PKG_SERVER: ""

@@ -242,4 +242,7 @@ finally
     rm(tmp, recursive=true)
 end
 
+using Aqua
+Aqua.test_all(GZip)
+
 #end  # for epoch
