@@ -248,7 +248,8 @@ function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Inte
 
     gz_file = ccall((_gzopen, _zlib), Ptr{Cvoid}, (Ptr{UInt8}, Ptr{UInt8}), fname, gzmode)
     if gz_file == C_NULL
-        throw(GZError(-1, "gzopen failed"))
+        errno = unsafe_load(cglobal((:errno, :libc), Int32))
+        throw(SystemError("$(fname)", errno))
     end
     if gz_buf_size != Z_DEFAULT_BUFSIZE
         if gzbuffer(gz_file, gz_buf_size) == -1
@@ -282,7 +283,8 @@ function gzdopen(name::AbstractString, fd::Integer, gzmode::AbstractString, gz_b
 
     gz_file = ccall((:gzdopen, _zlib), Ptr{Cvoid}, (Int32, Ptr{UInt8}), dup_fd, gzmode)
     if gz_file == C_NULL
-        throw(GZError(-1, "gzdopen failed"))
+        errno = unsafe_load(cglobal((:errno, :libc), Int32))
+        throw(SystemError("$(name)", errno))
     end
     if gz_buf_size != Z_DEFAULT_BUFSIZE
         if gzbuffer(gz_file, gz_buf_size) == -1
