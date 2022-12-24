@@ -1,0 +1,3 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+GZip = "92fee26a-97fe-5a0c-ad85-20a5f3185b63"
