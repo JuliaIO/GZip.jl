@@ -24,7 +24,7 @@ jobs:
           - windows-latest
         arch:
           - x64
-     steps:
+    steps:
       - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
         with:
@@ -43,12 +43,9 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: coverallsapp/github-action@master
+      - uses: codecov/codecov-action@v3
         with:
-          path-to-lcov: lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          flag-name: run${{ matrix.os }}-${{ matrix.version }}-${{ matrix.arch }}
-          parallel: true
+          file: lcov.info
   docs:
     name: Documentation
     runs-on: ubuntu-latest
