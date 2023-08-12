@@ -1,0 +1,13 @@
+[general]
+library_name = "Zlib_jll.libz_path"
+output_file_path = "../src/zlib_h.jl"
+module_name = "Zlib_h"
+jll_pkg_name = "Zlib_jll"
+export_symbol_prefixes = ["Z_",]
+use_julia_native_enum_type = false
+print_using_CEnum = false
+
+[codegen]
+is_function_strictly_typed = true
+opaque_func_arg_as_PtrCvoid = false
+opaque_as_mutable_struct = true
