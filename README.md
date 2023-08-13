@@ -37,7 +37,7 @@ close(fh)
     -   `seekend` and `truncate` are not available
     -   `readuntil` is available, but is not very efficient. (But `readline` works fine.)                        
                                                                                                                  
-In addition to [`open`], [`gzopen`], and [`gzdopen`], the following `IO`/`IOStream` functions are supported:                 
+In addition to `open`, `gzopen`, and `gzdopen`, the following `IO`/`IOStream` functions are supported:                 
 -   `close()`                                                                                                    
 -   `flush()`                                                                                                    
 -   `seek()`                                                                                                     
