@@ -1,7 +1,7 @@
 using GZip
 using Documenter
 
-DocMeta.setdocmeta!(GZip, :DocTestSetup, :(using GZip); recursive = true)
+push!(LOAD_PATH,"../src/")
 
 makedocs(
     sitename = "GZip.jl",
@@ -13,4 +13,4 @@ makedocs(
     ],
 )
 
-deploydocs(; repo = "github.com/JuliaIO/GZip.jl", devbranch = "master")
+deploydocs(repo = "github.com/JuliaIO/GZip.jl", devbranch = "master")

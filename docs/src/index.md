@@ -5,10 +5,7 @@ CurrentModule = GZip
 GZip
 ----
 
-```@docs
-GZip.GZipStream
-GZip.GZError
-GZip.open
-GZip.gzopen
-GZip.gzdopen
+```@autodocs
+Modules = [GZip]
+Order   = [:module, :type, :function]
 ```
