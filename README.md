@@ -32,3 +32,34 @@ close(fh)
 
 See the [documentation](https://gzipjl.readthedocs.org/en/latest/)
 for additional information.
+
+## Notes                                                                                                         
+                                                                                                                 
+-   This interface is only for gzipped files, not the streaming zlib                                             
+    compression interface. Internally, it depends on/uses the                                                    
+    streaming interface, but the gzip related functions are higher                                               
+    level functions pertaining to gzip files only.                                                               
+-   `GZipStream` is an implementation of `IO` and can be used virtually                                          
+    anywhere `IO` is used.                                                                                       
+-   This implementation mimics the `IOStream`{.interpreted-text                                                  
+    role="class"} implementation, and should be a drop-in replacement                                            
+    for `IOStream`, with some caveats:                                                                           
+    -   `seekend` and `truncate` are not available                                                               
+    -   `readuntil` is available, but is not very efficient. (But `readline` works fine.)                        
+                                                                                                                 
+In addition to [`open`](@ref), [`gzopen`](@ref), and [`gzdopen`](@ref), the                                      
+following `IO`/`IOStream` functions are supported:                                                               
+                                                                                                                 
+-   `close()`                                                                                                    
+-   `flush()`                                                                                                    
+-   `seek()`                                                                                                     
+-   `skip()`                                                                                                     
+-   `position()`                                                                                                 
+-   `eof()`                                                                                                      
+-   `read()`                                                                                                     
+-   `readuntil()`                                                                                                
+-   `readline()`                                                                                                 
+-   `write()`                                                                                                    
+-   `peek()`                                                                                                     
+                                                                                                                 
+Due to limitations in `zlib`, `seekend` and `truncate` are not available.                              
