@@ -5,6 +5,8 @@ This module provides a wrapper for the gzip related functions of
 unencumbered, lossless data-compression library. These functions
 allow the reading and writing of gzip files.
 
+Documentation: https://gzipjl.readthedocs.org/en/latest/
+
 Usage
 -----
 
