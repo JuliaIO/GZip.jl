@@ -47,16 +47,15 @@ gzerror(s::GZipStream) = gzerror(0, s)
 
 gzip error number and string. Possible error values:
 
-| Error number         | String                                 |
-|:---------------------|:---------------------------------------|
-|  `Z_OK`              |  No error                              |
-|  `Z_ERRNO`           |  Filesystem error (consult `errno()`)  |
-|  `Z_STREAM_ERROR`    |  Inconsistent stream state             |
-|  `Z_DATA_ERROR`      |  Compressed data error                 |
-|  `Z_MEM_ERROR`       |  Out of memory                         |
-|  `Z_BUF_ERROR`       |  Input buffer full/output buffer empty |
-|  `Z_VERSION_ERROR`   |  zlib library version is incompatible  |
-|                      |  with caller version                   |
+| Error number         | String                                                    |
+|:---------------------|:----------------------------------------------------------|
+|  `Z_OK`              |  No error                                                 |
+|  `Z_ERRNO`           |  Filesystem error (consult `errno()`)                     |
+|  `Z_STREAM_ERROR`    |  Inconsistent stream state                                |
+|  `Z_DATA_ERROR`      |  Compressed data error                                    |
+|  `Z_MEM_ERROR`       |  Out of memory                                            |
+|  `Z_BUF_ERROR`       |  Input buffer full/output buffer empty                    |
+|  `Z_VERSION_ERROR`   |  zlib library version is incompatible with caller version |
 """
 mutable struct GZError <: Exception
     err::Int32
