@@ -15,19 +15,16 @@ Typical usage would be something like
 ```julia
 import GZip
 
-fh = GZip.open("infile.gz")
-s = readline(fh)
-...
-close(fh)
-
-
-...
+# Write some text into a compressed .gz file
 s = "gzip is part of zlib, a free, general-purpose, " *
     "legally unencumbered, lossless data-compression library"
-
-fh = GZip.open("outfile.gz", "w")
+fh = GZip.open("testfile.gz", "w")
 write(fh, s)
-...
+close(fh)
+
+# Read back the data
+fh = GZip.open("testfile.gz")
+s = readline(fh)
 close(fh)
 ```
 
