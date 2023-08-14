@@ -13,7 +13,7 @@ Usage
 Typical usage would be something like
 
 ```julia
-import GZip
+using GZip
 
 # Write some text into a compressed .gz file
 s = "gzip is part of zlib, a free, general-purpose, " *
