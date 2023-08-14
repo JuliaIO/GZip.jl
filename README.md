@@ -1,11 +1,11 @@
 # GZip.jl: A Julia interface for gzip functions in zlib
 
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliaio.github.io/GZip.jl/dev)
+
 This module provides a wrapper for the gzip related functions of
 [zlib](http://zlib.net), a free, general-purpose, legally
 unencumbered, lossless data-compression library. These functions
 allow the reading and writing of gzip files.
-
-Documentation: https://gzipjl.readthedocs.org/en/latest/
 
 Usage
 -----
@@ -53,3 +53,7 @@ In addition to `open`, `gzopen`, and `gzdopen`, the following `IO`/`IOStream` fu
 -   `peek()`                                                                                                     
                                                                                                                  
 Due to limitations in `zlib`, `seekend` and `truncate` are not available.                              
+
+## Old Documentation
+
+Old documentation link: https://gzipjl.readthedocs.io/en/latest/
