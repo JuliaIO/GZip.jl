@@ -232,6 +232,110 @@ function zng_uncompress2(dest, destLen, source, sourceLen)
     ccall((:zng_uncompress2, Zlib_jll.libz_path), Int32, (Ptr{UInt8}, Ptr{Csize_t}, Ptr{UInt8}, Ptr{Csize_t}), dest, destLen, source, sourceLen)
 end
 
+struct gzFile_s
+    have::Cuint
+    next::Ptr{Cuchar}
+    pos::off_t
+end
+
+const gzFile = Ptr{gzFile_s}
+
+function zng_gzopen(path, mode)
+    ccall((:zng_gzopen, Zlib_jll.libz_path), gzFile, (Ptr{Cchar}, Ptr{Cchar}), path, mode)
+end
+
+function zng_gzdopen(fd::Cint, mode)
+    ccall((:zng_gzdopen, Zlib_jll.libz_path), gzFile, (Cint, Ptr{Cchar}), fd, mode)
+end
+
+function zng_gzbuffer(file::gzFile, size::UInt32)
+    ccall((:zng_gzbuffer, Zlib_jll.libz_path), Int32, (gzFile, UInt32), file, size)
+end
+
+function zng_gzsetparams(file::gzFile, level::Int32, strategy::Int32)
+    ccall((:zng_gzsetparams, Zlib_jll.libz_path), Int32, (gzFile, Int32, Int32), file, level, strategy)
+end
+
+function zng_gzread(file::gzFile, buf, len::UInt32)
+    ccall((:zng_gzread, Zlib_jll.libz_path), Int32, (gzFile, Ptr{Cvoid}, UInt32), file, buf, len)
+end
+
+function zng_gzfread(buf, size::Csize_t, nitems::Csize_t, file::gzFile)
+    ccall((:zng_gzfread, Zlib_jll.libz_path), Csize_t, (Ptr{Cvoid}, Csize_t, Csize_t, gzFile), buf, size, nitems, file)
+end
+
+function zng_gzwrite(file::gzFile, buf, len::UInt32)
+    ccall((:zng_gzwrite, Zlib_jll.libz_path), Int32, (gzFile, Ptr{Cvoid}, UInt32), file, buf, len)
+end
+
+function zng_gzfwrite(buf, size::Csize_t, nitems::Csize_t, file::gzFile)
+    ccall((:zng_gzfwrite, Zlib_jll.libz_path), Csize_t, (Ptr{Cvoid}, Csize_t, Csize_t, gzFile), buf, size, nitems, file)
+end
+
+function zng_gzputs(file::gzFile, s)
+    ccall((:zng_gzputs, Zlib_jll.libz_path), Int32, (gzFile, Ptr{Cchar}), file, s)
+end
+
+function zng_gzgets(file::gzFile, buf, len::Int32)
+    ccall((:zng_gzgets, Zlib_jll.libz_path), Ptr{Cchar}, (gzFile, Ptr{Cchar}, Int32), file, buf, len)
+end
+
+function zng_gzputc(file::gzFile, c::Int32)
+    ccall((:zng_gzputc, Zlib_jll.libz_path), Int32, (gzFile, Int32), file, c)
+end
+
+function zng_gzungetc(c::Int32, file::gzFile)
+    ccall((:zng_gzungetc, Zlib_jll.libz_path), Int32, (Int32, gzFile), c, file)
+end
+
+function zng_gzflush(file::gzFile, flush::Int32)
+    ccall((:zng_gzflush, Zlib_jll.libz_path), Int32, (gzFile, Int32), file, flush)
+end
+
+function zng_gzseek(file::gzFile, offset::off_t, whence::Cint)
+    ccall((:zng_gzseek, Zlib_jll.libz_path), off_t, (gzFile, off_t, Cint), file, offset, whence)
+end
+
+function zng_gzrewind(file::gzFile)
+    ccall((:zng_gzrewind, Zlib_jll.libz_path), Int32, (gzFile,), file)
+end
+
+function zng_gztell(file::gzFile)
+    ccall((:zng_gztell, Zlib_jll.libz_path), off_t, (gzFile,), file)
+end
+
+function zng_gzoffset(file::gzFile)
+    ccall((:zng_gzoffset, Zlib_jll.libz_path), off_t, (gzFile,), file)
+end
+
+function zng_gzeof(file::gzFile)
+    ccall((:zng_gzeof, Zlib_jll.libz_path), Int32, (gzFile,), file)
+end
+
+function zng_gzdirect(file::gzFile)
+    ccall((:zng_gzdirect, Zlib_jll.libz_path), Int32, (gzFile,), file)
+end
+
+function zng_gzclose(file::gzFile)
+    ccall((:zng_gzclose, Zlib_jll.libz_path), Int32, (gzFile,), file)
+end
+
+function zng_gzclose_r(file::gzFile)
+    ccall((:zng_gzclose_r, Zlib_jll.libz_path), Int32, (gzFile,), file)
+end
+
+function zng_gzclose_w(file::gzFile)
+    ccall((:zng_gzclose_w, Zlib_jll.libz_path), Int32, (gzFile,), file)
+end
+
+function zng_gzerror(file::gzFile, errnum)
+    ccall((:zng_gzerror, Zlib_jll.libz_path), Ptr{Cchar}, (gzFile, Ptr{Int32}), file, errnum)
+end
+
+function zng_gzclearerr(file::gzFile)
+    ccall((:zng_gzclearerr, Zlib_jll.libz_path), Cvoid, (gzFile,), file)
+end
+
 function zng_adler32(adler::UInt32, buf, len::UInt32)
     ccall((:zng_adler32, Zlib_jll.libz_path), UInt32, (UInt32, Ptr{UInt8}, UInt32), adler, buf, len)
 end

@@ -17,7 +17,7 @@ for target in JLLEnvs.JLL_ENV_TRIPLES
     arch = JLLEnvs.get_arch(target)
     os = JLLEnvs.get_os(target)
 #    if (arch == "aarch64" || arch == "x86_64" || arch == "powerpc64le") && (os != "windows")
-#        push!(args, "-DZ_WANT64")
+        push!(args, "-DWITH_GZFILEOP")
 #    end
 
     # create context
