@@ -495,7 +495,7 @@ const Z_UNKNOWN = 2
 
 const Z_DEFLATED = 8
 
-const Z_NULL = NULL
+#const Z_NULL = NULL
 
 # Skipping MacroDefinition: z_const const
 
@@ -505,7 +505,7 @@ const MAX_WBITS = 15
 
 # Skipping MacroDefinition: Z_EXTERN extern
 
-const ZNG_CONDEXPORT = Z_EXPORT
+#const ZNG_CONDEXPORT = Z_EXPORT
 
 const z_off_t = off_t
 

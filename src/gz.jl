@@ -21,13 +21,13 @@ mutable struct GZipStream <: IO
 
     _closed::Bool
 
-    function GZipStream(name::AbstractString, gz_file::ZlibNG_h.zng_gzFile, buf_size::Int)
+    function GZipStream(name::AbstractString, gz_file::ZlibNG_h.gzFile, buf_size::Int)
         x = new(name, gz_file, buf_size, false)
         finalizer(close, x)
         x
     end
 end
-GZipStream(name::AbstractString, gz_file::ZlibNG_h.zng_gzFile) = GZipStream(name, gz_file, Z_DEFAULT_BUFSIZE)
+GZipStream(name::AbstractString, gz_file::ZlibNG_h.gzFile) = GZipStream(name, gz_file, Z_DEFAULT_BUFSIZE)
 
 # gzerror
 function gzerror(err::Integer, s::GZipStream)
@@ -140,9 +140,9 @@ global gzbuffer, _gzopen, _gzseek, _gztell, _gzoffset
 
 # Doesn't exist in zlib 1.2.3 or earlier
 if Libdl.dlsym_e(ZlibNG_jll.libzng_handle, :gzbuffer) != C_NULL
-    gzbuffer(gz_file::ZlibNG_h.zng_gzFile, gz_buf_size::Integer) = ZlibNG_h.zng_gzbuffer(gz_file, gz_buf_size)
+    gzbuffer(gz_file::ZlibNG_h.gzFile, gz_buf_size::Integer) = ZlibNG_h.zng_gzbuffer(gz_file, gz_buf_size)
 else
-    gzbuffer(gz_file::ZlibNG_h.zng_gzFile, gz_buf_size::Integer) = Cint(-1)
+    gzbuffer(gz_file::ZlibNG_h.gzFile, gz_buf_size::Integer) = Cint(-1)
 end
 
 #####

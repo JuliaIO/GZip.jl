@@ -34,8 +34,8 @@ end
 
 using .ZlibNG_h
 
-const GZLIB_VERSION = unsafe_string(ZlibNG_h.zlibng_version)
-const ZLIB_VERSION  = tuple([parse(Int, c) for c in split(GZLIB_VERSION, '.')]...)
+#const GZLIB_VERSION = unsafe_string(ZlibNG_h.zlibng_version)
+#const ZLIB_VERSION  = tuple([parse(Int, c) for c in split(GZLIB_VERSION, '.')]...)
 
 # Constants for use with gzbuffer
 const Z_DEFAULT_BUFSIZE = 8192

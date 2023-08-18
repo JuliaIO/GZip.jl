@@ -9,5 +9,5 @@ print_using_CEnum = false
 
 [codegen]
 is_function_strictly_typed = true
-opaque_func_arg_as_PtrCvoid = false
+opaque_func_arg_as_PtrCvoid = true
 opaque_as_mutable_struct = true
