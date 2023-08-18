@@ -32,9 +32,9 @@ else
     error("Unknown platform: $(Base.BUILD_TRIPLET)")
 end
 
-using .Zlib_h
+using .ZlibNG_h
 
-const GZLIB_VERSION = unsafe_string(Zlib_h.zlib_version)
+const GZLIB_VERSION = unsafe_string(ZlibNG_h.zlibng_version)
 const ZLIB_VERSION  = tuple([parse(Int, c) for c in split(GZLIB_VERSION, '.')]...)
 
 # Constants for use with gzbuffer
@@ -46,7 +46,7 @@ const Z_BIG_BUFSIZE = 131072
 # file offset.
 
 # Get compile-time option flags
-const zlib_compile_flags = Zlib_h.zlibCompileFlags()
+const zlib_compile_flags = ZlibNG_h.zng_zlibCompileFlags()
 const z_off_t_sz = 2 << ((zlib_compile_flags >> 6) & UInt(3))
 if z_off_t_sz == 8 || (!Sys.iswindows() && Libdl.dlsym_e(Zlib_jll.libz_handle, :gzopen64) != C_NULL)
     const ZFileOffset = Int64

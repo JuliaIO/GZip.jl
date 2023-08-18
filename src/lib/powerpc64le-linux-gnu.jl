@@ -7,28 +7,6 @@ const __darwin_off_t = Int64
 
 const off_t = __darwin_off_t
 
-const Byte = Cuchar
-
-const Bytef = Byte
-
-const uInt = Cuint
-
-const uLong = Culong
-
-const charf = Cchar
-
-const intf = Cint
-
-const uIntf = uInt
-
-const uLongf = uLong
-
-const voidpc = Ptr{Cvoid}
-
-const voidpf = Ptr{Cvoid}
-
-const voidp = Ptr{Cvoid}
-
 # typedef void * ( * alloc_func ) ( void * opaque , unsigned int items , unsigned int size )
 const alloc_func = Ptr{Cvoid}
 
@@ -421,19 +399,27 @@ function zng_deflateResetKeep(arg1)
     ccall((:zng_deflateResetKeep, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), arg1)
 end
 
-# Skipping MacroDefinition: z_const const
+const Byte = Cuchar
 
-const MAX_MEM_LEVEL = 9
+const Bytef = Byte
 
-const MAX_WBITS = 15
+const uInt = Cuint
 
-# Skipping MacroDefinition: Z_EXTERN extern
+const uLong = Culong
 
-const ZNG_CONDEXPORT = Z_EXPORT
+const charf = Cchar
 
-const z_off_t = off_t
+const intf = Cint
 
-const z_off64_t = z_off_t
+const uIntf = uInt
+
+const uLongf = uLong
+
+const voidpc = Ptr{Cvoid}
+
+const voidpf = Ptr{Cvoid}
+
+const voidp = Ptr{Cvoid}
 
 const ZLIBNG_VERSION = "2.1.0.devel"
 
@@ -511,8 +497,22 @@ const Z_DEFLATED = 8
 
 const Z_NULL = NULL
 
+# Skipping MacroDefinition: z_const const
+
+const MAX_MEM_LEVEL = 9
+
+const MAX_WBITS = 15
+
+# Skipping MacroDefinition: Z_EXTERN extern
+
+const ZNG_CONDEXPORT = Z_EXPORT
+
+const z_off_t = off_t
+
+const z_off64_t = z_off_t
+
 # exports
-const PREFIXES = ["Z_"]
+const PREFIXES = ["Z_", "ZNG_"]
 for name in names(@__MODULE__; all=true), prefix in PREFIXES
     if startswith(string(name), prefix)
         @eval export $name

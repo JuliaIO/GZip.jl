@@ -4,7 +4,7 @@ using ZlibNG_jll
 
 cd(@__DIR__)
 options = load_options(joinpath(@__DIR__, "generator.toml"))
-headers = ZlibNG_jll.artifact_dir * "/include/zlib-ng.h"
+headers = [ZlibNG_jll.artifact_dir * "/include/zlib-ng.h", ZlibNG_jll.artifact_dir * "/include/zconf-ng.h"]
 
 # run generator for all platforms
 for target in JLLEnvs.JLL_ENV_TRIPLES
