@@ -48,7 +48,7 @@ const Z_BIG_BUFSIZE = 131072
 # Get compile-time option flags
 const zlib_compile_flags = Zlib_h.zlibCompileFlags()
 const z_off_t_sz = 2 << ((zlib_compile_flags >> 6) & UInt(3))
-if z_off_t_sz == 8 || (!Sys.iswindows() && Libdl.dlsym_e(Zlib_jll.libz_handle, :gzopen64) != C_NULL)
+if z_off_t_sz == 8 || (!Sys.iswindows() && isdefined(GZip.Zlib_h, :gzopen64))
     const ZFileOffset = Int64
 elseif z_off_t_sz == 4
     const ZFileOffset = Int32
