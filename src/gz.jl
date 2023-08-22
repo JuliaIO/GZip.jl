@@ -136,30 +136,8 @@ gzwrite(s::GZipStream, p::Ptr, len::Integer) =
 gzread(s::GZipStream, p::Ptr, len::Integer) =
     @test_gzerror(s, ZlibNG_h.zng_gzread(s.gz_file, reinterpret(Ptr{Cvoid}, p), Cuint(len)), -1)
 
-global gzbuffer, _gzopen, _gzseek, _gztell, _gzoffset
-
-# Doesn't exist in zlib 1.2.3 or earlier
-if Libdl.dlsym_e(ZlibNG_jll.libzng_handle, :gzbuffer) != C_NULL
-    gzbuffer(gz_file::ZlibNG_h.gzFile, gz_buf_size::Integer) = ZlibNG_h.zng_gzbuffer(gz_file, gz_buf_size)
-else
-    gzbuffer(gz_file::ZlibNG_h.gzFile, gz_buf_size::Integer) = Cint(-1)
-end
-
-#####
-
-# Use 64-bit functions if available
-
-if Libdl.dlsym_e(ZlibNG_jll.libzng_handle, :gzopen64) != C_NULL && (z_off_t_sz == 8 || !Sys.iswindows())
-    const _gzopen = ZlibNG_h.zng_gzopen64
-    const _gzseek = ZlibNG_h.zng_gzseek64
-    const _gztell = ZlibNG_h.zng_gztell64
-    const _gzoffset = ZlibNG_h.zng_gzoffset64
-else
-    const _gzopen = ZlibNG_h.zng_gzopen
-    const _gzseek = ZlibNG_h.zng_gzseek
-    const _gztell = ZlibNG_h.zng_gztell
-    const _gzoffset = ZlibNG_h.zng_gzoffset
-end
+# Needs zlib 1.2.3 or higher (Julia 1.9 has zlib 1.2.13)
+gzbuffer(gz_file::Zlib_h.gzFile, gz_buf_size::Integer) = Zlib_h.gzbuffer(gz_file, gz_buf_size)
 
 """
     gzopen(fname::AbstractString, [gzmode::AbstractString, buf_size::Integer])::GZipStream
@@ -207,7 +185,7 @@ function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Inte
         gzmode *= "b"
     end
 
-    gz_file = _gzopen(fname, gzmode)
+    gz_file = Zlib_h.gzopen(fname, gzmode)
     if gz_file == C_NULL
         errno = unsafe_load(cglobal((:errno, :libc), Cint))
         throw(SystemError("$(fname)", errno))
@@ -306,15 +284,15 @@ function seek(s::GZipStream, n::Integer)
         end
     end
     # Mimic behavior of seek(s::IOStream, n)
-    _gzseek(s.gz_file, Clong(n), SEEK_SET) != -1 || error("seek (gzseek) failed")
+    Zlib_h.gzseek(s.gz_file, Clong(n), SEEK_SET) != -1 || error("seek (gzseek) failed")
 end
 
 # Note: skips bytes within uncompressed data stream
 # Mimic behavior of skip(s::IOStream, n)
 skip(s::GZipStream, n::Integer) =
-    _gzseek(s.gz_file, Clong(n), SEEK_CUR) != -1 || error("skip (gzseek) failed")
+    Zlib_h.gzseek(s.gz_file, Clong(n), SEEK_CUR) != -1 || error("skip (gzseek) failed")
 
-position(s::GZipStream, raw::Bool=false) = raw ? _gzoffset(s.gz_file) : _gztell(s.gz_file)
+position(s::GZipStream, raw::Bool=false) = raw ? Zlib_h.gzoffset(s.gz_file) : Zlib_h.gztell(s.gz_file)
 
 eof(s::GZipStream) = Bool(ZlibNG_h.zng_gzeof(s.gz_file))
 
