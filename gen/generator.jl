@@ -4,7 +4,7 @@ using ZlibNG_jll
 
 cd(@__DIR__)
 options = load_options(joinpath(@__DIR__, "generator.toml"))
-headers = [ZlibNG_jll.artifact_dir * "/include/zlib-ng.h", ZlibNG_jll.artifact_dir * "/include/zconf-ng.h"]
+headers = ZlibNG_jll.artifact_dir .* ["/include/zlib-ng.h", "/include/zconf-ng.h"]
 
 # run generator for all platforms
 for target in JLLEnvs.JLL_ENV_TRIPLES
@@ -16,9 +16,7 @@ for target in JLLEnvs.JLL_ENV_TRIPLES
     args = get_default_args()
     arch = JLLEnvs.get_arch(target)
     os = JLLEnvs.get_os(target)
-#    if (arch == "aarch64" || arch == "x86_64" || arch == "powerpc64le") && (os != "windows")
     push!(args, "-DWITH_GZFILEOP")
-#    end
 
     # create context
     ctx = create_context(headers, args, options)
