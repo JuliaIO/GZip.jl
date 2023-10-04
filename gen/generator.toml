@@ -1,13 +1,19 @@
 [general]
-library_name = "Zlib_jll.libz_path"
-output_file_path = "../src/zlib_h.jl"
-module_name = "Zlib_h"
-jll_pkg_name = "Zlib_jll"
-export_symbol_prefixes = ["Z_",]
-use_julia_native_enum_type = false
+library_name = "ZlibNG_jll.libzng_path"
+output_file_path = "../src/zlibng_h.jl"
+module_name = "ZlibNG_h"
+jll_pkg_name = "ZlibNG_jll"
+export_symbol_prefixes = ["Z_", "ZNG_"]
+use_julia_native_enum_type = true
 print_using_CEnum = false
+#prologue_file_path = "./prologue.jl"
+output_ignorelist = [
+    "Z_EXPORT",
+    "Z_NULL",
+    "ZNG_CONDEXPORT",
+]
 
 [codegen]
 is_function_strictly_typed = true
-opaque_func_arg_as_PtrCvoid = false
+opaque_func_arg_as_PtrCvoid = true
 opaque_as_mutable_struct = true

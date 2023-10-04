@@ -1,83 +1,213 @@
-module Zlib_h
+module ZlibNG_h
 
-using Zlib_jll
-export Zlib_jll
-
-const z_size_t = Csize_t
-
-const Byte = Cuchar
-
-const uInt = Cuint
-
-const uLong = Culong
-
-const Bytef = Byte
-
-const uLongf = uLong
-
-const voidpc = Ptr{Cvoid}
-
-const voidpf = Ptr{Cvoid}
-
-const voidp = Ptr{Cvoid}
-
-const z_crc_t = Culong
+using ZlibNG_jll
+export ZlibNG_jll
 
 const __darwin_off_t = Int64
 
 const off_t = __darwin_off_t
 
-function zlibVersion()
-    ccall((:zlibVersion, Zlib_jll.libz_path), Ptr{Cchar}, ())
-end
+# typedef void * ( * alloc_func ) ( void * opaque , unsigned int items , unsigned int size )
+const alloc_func = Ptr{Cvoid}
+
+# typedef void ( * free_func ) ( void * opaque , void * address )
+const free_func = Ptr{Cvoid}
 
 mutable struct internal_state end
 
-# typedef voidpf ( * alloc_func ) OF
-const alloc_func = Ptr{Cvoid}
-
-# typedef void ( * free_func ) OF
-const free_func = Ptr{Cvoid}
-
-struct z_stream_s
-    next_in::Ptr{Bytef}
-    avail_in::uInt
-    total_in::uLong
-    next_out::Ptr{Bytef}
-    avail_out::uInt
-    total_out::uLong
+struct zng_stream_s
+    next_in::Ptr{UInt8}
+    avail_in::UInt32
+    total_in::Csize_t
+    next_out::Ptr{UInt8}
+    avail_out::UInt32
+    total_out::Csize_t
     msg::Ptr{Cchar}
     state::Ptr{internal_state}
     zalloc::alloc_func
     zfree::free_func
-    opaque::voidpf
+    opaque::Ptr{Cvoid}
     data_type::Cint
-    adler::uLong
-    reserved::uLong
+    adler::UInt32
+    reserved::Culong
 end
 
-const z_stream = z_stream_s
+const zng_stream = zng_stream_s
 
-const z_streamp = Ptr{z_stream}
+const zng_streamp = Ptr{zng_stream}
 
-function deflateInit_(strm::z_streamp, level::Cint, version, stream_size::Cint)
-    ccall((:deflateInit_, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Ptr{Cchar}, Cint), strm, level, version, stream_size)
+struct zng_gz_header_s
+    text::Int32
+    time::Culong
+    xflags::Int32
+    os::Int32
+    extra::Ptr{UInt8}
+    extra_len::UInt32
+    extra_max::UInt32
+    name::Ptr{UInt8}
+    name_max::UInt32
+    comment::Ptr{UInt8}
+    comm_max::UInt32
+    hcrc::Int32
+    done::Int32
 end
 
-function inflateInit_(strm::z_streamp, version, stream_size::Cint)
-    ccall((:inflateInit_, Zlib_jll.libz_path), Cint, (z_streamp, Ptr{Cchar}, Cint), strm, version, stream_size)
+const zng_gz_header = zng_gz_header_s
+
+const zng_gz_headerp = Ptr{zng_gz_header}
+
+function zlibng_version()
+    ccall((:zlibng_version, ZlibNG_jll.libzng_path), Ptr{Cchar}, ())
 end
 
-function deflateInit2_(strm::z_streamp, level::Cint, method::Cint, windowBits::Cint, memLevel::Cint, strategy::Cint, version, stream_size::Cint)
-    ccall((:deflateInit2_, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Cint, Cint, Cint, Cint, Ptr{Cchar}, Cint), strm, level, method, windowBits, memLevel, strategy, version, stream_size)
+function zng_deflateInit(strm, level::Int32)
+    ccall((:zng_deflateInit, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32), strm, level)
 end
 
-function inflateInit2_(strm::z_streamp, windowBits::Cint, version, stream_size::Cint)
-    ccall((:inflateInit2_, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Ptr{Cchar}, Cint), strm, windowBits, version, stream_size)
+function zng_deflate(strm, flush::Int32)
+    ccall((:zng_deflate, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32), strm, flush)
 end
 
-function inflateBackInit_(strm::z_streamp, windowBits::Cint, window, version, stream_size::Cint)
-    ccall((:inflateBackInit_, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Ptr{Cuchar}, Ptr{Cchar}, Cint), strm, windowBits, window, version, stream_size)
+function zng_deflateEnd(strm)
+    ccall((:zng_deflateEnd, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), strm)
+end
+
+function zng_inflateInit(strm)
+    ccall((:zng_inflateInit, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), strm)
+end
+
+function zng_inflate(strm, flush::Int32)
+    ccall((:zng_inflate, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32), strm, flush)
+end
+
+function zng_inflateEnd(strm)
+    ccall((:zng_inflateEnd, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), strm)
+end
+
+function zng_deflateInit2(strm, level::Int32, method::Int32, windowBits::Int32, memLevel::Int32, strategy::Int32)
+    ccall((:zng_deflateInit2, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32, Int32, Int32, Int32, Int32), strm, level, method, windowBits, memLevel, strategy)
+end
+
+function zng_deflateSetDictionary(strm, dictionary, dictLength::UInt32)
+    ccall((:zng_deflateSetDictionary, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{UInt8}, UInt32), strm, dictionary, dictLength)
+end
+
+function zng_deflateGetDictionary(strm, dictionary, dictLength)
+    ccall((:zng_deflateGetDictionary, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{UInt8}, Ptr{UInt32}), strm, dictionary, dictLength)
+end
+
+function zng_deflateCopy(dest, source)
+    ccall((:zng_deflateCopy, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{zng_stream}), dest, source)
+end
+
+function zng_deflateReset(strm)
+    ccall((:zng_deflateReset, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), strm)
+end
+
+function zng_deflateParams(strm, level::Int32, strategy::Int32)
+    ccall((:zng_deflateParams, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32, Int32), strm, level, strategy)
+end
+
+function zng_deflateTune(strm, good_length::Int32, max_lazy::Int32, nice_length::Int32, max_chain::Int32)
+    ccall((:zng_deflateTune, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32, Int32, Int32, Int32), strm, good_length, max_lazy, nice_length, max_chain)
+end
+
+function zng_deflateBound(strm, sourceLen::Culong)
+    ccall((:zng_deflateBound, ZlibNG_jll.libzng_path), Culong, (Ptr{zng_stream}, Culong), strm, sourceLen)
+end
+
+function zng_deflatePending(strm, pending, bits)
+    ccall((:zng_deflatePending, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{UInt32}, Ptr{Int32}), strm, pending, bits)
+end
+
+function zng_deflatePrime(strm, bits::Int32, value::Int32)
+    ccall((:zng_deflatePrime, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32, Int32), strm, bits, value)
+end
+
+function zng_deflateSetHeader(strm, head::zng_gz_headerp)
+    ccall((:zng_deflateSetHeader, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, zng_gz_headerp), strm, head)
+end
+
+function zng_inflateInit2(strm, windowBits::Int32)
+    ccall((:zng_inflateInit2, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32), strm, windowBits)
+end
+
+function zng_inflateSetDictionary(strm, dictionary, dictLength::UInt32)
+    ccall((:zng_inflateSetDictionary, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{UInt8}, UInt32), strm, dictionary, dictLength)
+end
+
+function zng_inflateGetDictionary(strm, dictionary, dictLength)
+    ccall((:zng_inflateGetDictionary, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{UInt8}, Ptr{UInt32}), strm, dictionary, dictLength)
+end
+
+function zng_inflateSync(strm)
+    ccall((:zng_inflateSync, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), strm)
+end
+
+function zng_inflateCopy(dest, source)
+    ccall((:zng_inflateCopy, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{zng_stream}), dest, source)
+end
+
+function zng_inflateReset(strm)
+    ccall((:zng_inflateReset, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), strm)
+end
+
+function zng_inflateReset2(strm, windowBits::Int32)
+    ccall((:zng_inflateReset2, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32), strm, windowBits)
+end
+
+function zng_inflatePrime(strm, bits::Int32, value::Int32)
+    ccall((:zng_inflatePrime, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32, Int32), strm, bits, value)
+end
+
+function zng_inflateMark(strm)
+    ccall((:zng_inflateMark, ZlibNG_jll.libzng_path), Clong, (Ptr{zng_stream},), strm)
+end
+
+function zng_inflateGetHeader(strm, head::zng_gz_headerp)
+    ccall((:zng_inflateGetHeader, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, zng_gz_headerp), strm, head)
+end
+
+function zng_inflateBackInit(strm, windowBits::Int32, window)
+    ccall((:zng_inflateBackInit, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32, Ptr{UInt8}), strm, windowBits, window)
+end
+
+# typedef uint32_t ( * in_func ) ( void * , const uint8_t * * )
+const in_func = Ptr{Cvoid}
+
+# typedef int32_t ( * out_func ) ( void * , uint8_t * , uint32_t )
+const out_func = Ptr{Cvoid}
+
+function zng_inflateBack(strm, in::in_func, in_desc, out::out_func, out_desc)
+    ccall((:zng_inflateBack, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, in_func, Ptr{Cvoid}, out_func, Ptr{Cvoid}), strm, in, in_desc, out, out_desc)
+end
+
+function zng_inflateBackEnd(strm)
+    ccall((:zng_inflateBackEnd, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), strm)
+end
+
+function zng_zlibCompileFlags()
+    ccall((:zng_zlibCompileFlags, ZlibNG_jll.libzng_path), Culong, ())
+end
+
+function zng_compress(dest, destLen, source, sourceLen::Csize_t)
+    ccall((:zng_compress, ZlibNG_jll.libzng_path), Int32, (Ptr{UInt8}, Ptr{Csize_t}, Ptr{UInt8}, Csize_t), dest, destLen, source, sourceLen)
+end
+
+function zng_compress2(dest, destLen, source, sourceLen::Csize_t, level::Int32)
+    ccall((:zng_compress2, ZlibNG_jll.libzng_path), Int32, (Ptr{UInt8}, Ptr{Csize_t}, Ptr{UInt8}, Csize_t, Int32), dest, destLen, source, sourceLen, level)
+end
+
+function zng_compressBound(sourceLen::Csize_t)
+    ccall((:zng_compressBound, ZlibNG_jll.libzng_path), Csize_t, (Csize_t,), sourceLen)
+end
+
+function zng_uncompress(dest, destLen, source, sourceLen::Csize_t)
+    ccall((:zng_uncompress, ZlibNG_jll.libzng_path), Int32, (Ptr{UInt8}, Ptr{Csize_t}, Ptr{UInt8}, Csize_t), dest, destLen, source, sourceLen)
+end
+
+function zng_uncompress2(dest, destLen, source, sourceLen)
+    ccall((:zng_uncompress2, ZlibNG_jll.libzng_path), Int32, (Ptr{UInt8}, Ptr{Csize_t}, Ptr{UInt8}, Ptr{Csize_t}), dest, destLen, source, sourceLen)
 end
 
 struct gzFile_s
@@ -88,331 +218,222 @@ end
 
 const gzFile = Ptr{gzFile_s}
 
-function gzopen64(arg1, arg2)
-    ccall((:gzopen64, Zlib_jll.libz_path), gzFile, (Ptr{Cchar}, Ptr{Cchar}), arg1, arg2)
+function zng_gzopen(path, mode)
+    ccall((:zng_gzopen, ZlibNG_jll.libzng_path), gzFile, (Ptr{Cchar}, Ptr{Cchar}), path, mode)
 end
 
-function gzseek64(arg1::gzFile, arg2::Clong, arg3::Cint)
-    ccall((:gzseek64, Zlib_jll.libz_path), Clong, (gzFile, Clong, Cint), arg1, arg2, arg3)
+function zng_gzdopen(fd::Cint, mode)
+    ccall((:zng_gzdopen, ZlibNG_jll.libzng_path), gzFile, (Cint, Ptr{Cchar}), fd, mode)
 end
 
-function gztell64(arg1::gzFile)
-    ccall((:gztell64, Zlib_jll.libz_path), Clong, (gzFile,), arg1)
+function zng_gzbuffer(file::gzFile, size::UInt32)
+    ccall((:zng_gzbuffer, ZlibNG_jll.libzng_path), Int32, (gzFile, UInt32), file, size)
 end
 
-function gzoffset64(arg1::gzFile)
-    ccall((:gzoffset64, Zlib_jll.libz_path), Clong, (gzFile,), arg1)
+function zng_gzsetparams(file::gzFile, level::Int32, strategy::Int32)
+    ccall((:zng_gzsetparams, ZlibNG_jll.libzng_path), Int32, (gzFile, Int32, Int32), file, level, strategy)
 end
 
-function adler32_combine64(arg1::uLong, arg2::uLong, arg3::Clong)
-    ccall((:adler32_combine64, Zlib_jll.libz_path), uLong, (uLong, uLong, Clong), arg1, arg2, arg3)
+function zng_gzread(file::gzFile, buf, len::UInt32)
+    ccall((:zng_gzread, ZlibNG_jll.libzng_path), Int32, (gzFile, Ptr{Cvoid}, UInt32), file, buf, len)
 end
 
-function crc32_combine64(arg1::uLong, arg2::uLong, arg3::Clong)
-    ccall((:crc32_combine64, Zlib_jll.libz_path), uLong, (uLong, uLong, Clong), arg1, arg2, arg3)
+function zng_gzfread(buf, size::Csize_t, nitems::Csize_t, file::gzFile)
+    ccall((:zng_gzfread, ZlibNG_jll.libzng_path), Csize_t, (Ptr{Cvoid}, Csize_t, Csize_t, gzFile), buf, size, nitems, file)
 end
 
-function crc32_combine_gen64(arg1::Clong)
-    ccall((:crc32_combine_gen64, Zlib_jll.libz_path), uLong, (Clong,), arg1)
+function zng_gzwrite(file::gzFile, buf, len::UInt32)
+    ccall((:zng_gzwrite, ZlibNG_jll.libzng_path), Int32, (gzFile, Ptr{Cvoid}, UInt32), file, buf, len)
 end
 
-struct gz_header_s
-    text::Cint
-    time::uLong
-    xflags::Cint
-    os::Cint
-    extra::Ptr{Bytef}
-    extra_len::uInt
-    extra_max::uInt
-    name::Ptr{Bytef}
-    name_max::uInt
-    comment::Ptr{Bytef}
-    comm_max::uInt
-    hcrc::Cint
-    done::Cint
+function zng_gzfwrite(buf, size::Csize_t, nitems::Csize_t, file::gzFile)
+    ccall((:zng_gzfwrite, ZlibNG_jll.libzng_path), Csize_t, (Ptr{Cvoid}, Csize_t, Csize_t, gzFile), buf, size, nitems, file)
 end
 
-const gz_header = gz_header_s
-
-const gz_headerp = Ptr{gz_header}
-
-function deflate(strm::z_streamp, flush::Cint)
-    ccall((:deflate, Zlib_jll.libz_path), Cint, (z_streamp, Cint), strm, flush)
-end
-
-function deflateEnd(strm::z_streamp)
-    ccall((:deflateEnd, Zlib_jll.libz_path), Cint, (z_streamp,), strm)
-end
-
-function inflate(strm::z_streamp, flush::Cint)
-    ccall((:inflate, Zlib_jll.libz_path), Cint, (z_streamp, Cint), strm, flush)
-end
-
-function inflateEnd(strm::z_streamp)
-    ccall((:inflateEnd, Zlib_jll.libz_path), Cint, (z_streamp,), strm)
-end
-
-function deflateSetDictionary(strm::z_streamp, dictionary, dictLength::uInt)
-    ccall((:deflateSetDictionary, Zlib_jll.libz_path), Cint, (z_streamp, Ptr{Bytef}, uInt), strm, dictionary, dictLength)
-end
-
-function deflateGetDictionary(strm::z_streamp, dictionary, dictLength)
-    ccall((:deflateGetDictionary, Zlib_jll.libz_path), Cint, (z_streamp, Ptr{Bytef}, Ptr{uInt}), strm, dictionary, dictLength)
-end
-
-function deflateCopy(dest::z_streamp, source::z_streamp)
-    ccall((:deflateCopy, Zlib_jll.libz_path), Cint, (z_streamp, z_streamp), dest, source)
-end
-
-function deflateReset(strm::z_streamp)
-    ccall((:deflateReset, Zlib_jll.libz_path), Cint, (z_streamp,), strm)
-end
-
-function deflateParams(strm::z_streamp, level::Cint, strategy::Cint)
-    ccall((:deflateParams, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Cint), strm, level, strategy)
-end
-
-function deflateTune(strm::z_streamp, good_length::Cint, max_lazy::Cint, nice_length::Cint, max_chain::Cint)
-    ccall((:deflateTune, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Cint, Cint, Cint), strm, good_length, max_lazy, nice_length, max_chain)
-end
-
-function deflateBound(strm::z_streamp, sourceLen::uLong)
-    ccall((:deflateBound, Zlib_jll.libz_path), uLong, (z_streamp, uLong), strm, sourceLen)
-end
-
-function deflatePending(strm::z_streamp, pending, bits)
-    ccall((:deflatePending, Zlib_jll.libz_path), Cint, (z_streamp, Ptr{Cuint}, Ptr{Cint}), strm, pending, bits)
-end
-
-function deflatePrime(strm::z_streamp, bits::Cint, value::Cint)
-    ccall((:deflatePrime, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Cint), strm, bits, value)
-end
-
-function deflateSetHeader(strm::z_streamp, head::gz_headerp)
-    ccall((:deflateSetHeader, Zlib_jll.libz_path), Cint, (z_streamp, gz_headerp), strm, head)
-end
-
-function inflateSetDictionary(strm::z_streamp, dictionary, dictLength::uInt)
-    ccall((:inflateSetDictionary, Zlib_jll.libz_path), Cint, (z_streamp, Ptr{Bytef}, uInt), strm, dictionary, dictLength)
-end
-
-function inflateGetDictionary(strm::z_streamp, dictionary, dictLength)
-    ccall((:inflateGetDictionary, Zlib_jll.libz_path), Cint, (z_streamp, Ptr{Bytef}, Ptr{uInt}), strm, dictionary, dictLength)
-end
-
-function inflateSync(strm::z_streamp)
-    ccall((:inflateSync, Zlib_jll.libz_path), Cint, (z_streamp,), strm)
+function zng_gzputs(file::gzFile, s)
+    ccall((:zng_gzputs, ZlibNG_jll.libzng_path), Int32, (gzFile, Ptr{Cchar}), file, s)
 end
 
-function inflateCopy(dest::z_streamp, source::z_streamp)
-    ccall((:inflateCopy, Zlib_jll.libz_path), Cint, (z_streamp, z_streamp), dest, source)
+function zng_gzgets(file::gzFile, buf, len::Int32)
+    ccall((:zng_gzgets, ZlibNG_jll.libzng_path), Ptr{Cchar}, (gzFile, Ptr{Cchar}, Int32), file, buf, len)
 end
 
-function inflateReset(strm::z_streamp)
-    ccall((:inflateReset, Zlib_jll.libz_path), Cint, (z_streamp,), strm)
+function zng_gzputc(file::gzFile, c::Int32)
+    ccall((:zng_gzputc, ZlibNG_jll.libzng_path), Int32, (gzFile, Int32), file, c)
 end
 
-function inflateReset2(strm::z_streamp, windowBits::Cint)
-    ccall((:inflateReset2, Zlib_jll.libz_path), Cint, (z_streamp, Cint), strm, windowBits)
+function zng_gzungetc(c::Int32, file::gzFile)
+    ccall((:zng_gzungetc, ZlibNG_jll.libzng_path), Int32, (Int32, gzFile), c, file)
 end
 
-function inflatePrime(strm::z_streamp, bits::Cint, value::Cint)
-    ccall((:inflatePrime, Zlib_jll.libz_path), Cint, (z_streamp, Cint, Cint), strm, bits, value)
+function zng_gzflush(file::gzFile, flush::Int32)
+    ccall((:zng_gzflush, ZlibNG_jll.libzng_path), Int32, (gzFile, Int32), file, flush)
 end
 
-function inflateMark(strm::z_streamp)
-    ccall((:inflateMark, Zlib_jll.libz_path), Clong, (z_streamp,), strm)
+function zng_gzseek(file::gzFile, offset::off_t, whence::Cint)
+    ccall((:zng_gzseek, ZlibNG_jll.libzng_path), off_t, (gzFile, off_t, Cint), file, offset, whence)
 end
-
-function inflateGetHeader(strm::z_streamp, head::gz_headerp)
-    ccall((:inflateGetHeader, Zlib_jll.libz_path), Cint, (z_streamp, gz_headerp), strm, head)
-end
-
-# typedef unsigned ( * in_func ) OF
-const in_func = Ptr{Cvoid}
 
-# typedef int ( * out_func ) OF
-const out_func = Ptr{Cvoid}
-
-function inflateBack(strm::z_streamp, in::in_func, in_desc, out::out_func, out_desc)
-    ccall((:inflateBack, Zlib_jll.libz_path), Cint, (z_streamp, in_func, Ptr{Cvoid}, out_func, Ptr{Cvoid}), strm, in, in_desc, out, out_desc)
+function zng_gzrewind(file::gzFile)
+    ccall((:zng_gzrewind, ZlibNG_jll.libzng_path), Int32, (gzFile,), file)
 end
 
-function inflateBackEnd(strm::z_streamp)
-    ccall((:inflateBackEnd, Zlib_jll.libz_path), Cint, (z_streamp,), strm)
+function zng_gztell(file::gzFile)
+    ccall((:zng_gztell, ZlibNG_jll.libzng_path), off_t, (gzFile,), file)
 end
 
-function zlibCompileFlags()
-    ccall((:zlibCompileFlags, Zlib_jll.libz_path), uLong, ())
+function zng_gzoffset(file::gzFile)
+    ccall((:zng_gzoffset, ZlibNG_jll.libzng_path), off_t, (gzFile,), file)
 end
 
-function compress(dest, destLen, source, sourceLen::uLong)
-    ccall((:compress, Zlib_jll.libz_path), Cint, (Ptr{Bytef}, Ptr{uLongf}, Ptr{Bytef}, uLong), dest, destLen, source, sourceLen)
+function zng_gzeof(file::gzFile)
+    ccall((:zng_gzeof, ZlibNG_jll.libzng_path), Int32, (gzFile,), file)
 end
 
-function compress2(dest, destLen, source, sourceLen::uLong, level::Cint)
-    ccall((:compress2, Zlib_jll.libz_path), Cint, (Ptr{Bytef}, Ptr{uLongf}, Ptr{Bytef}, uLong, Cint), dest, destLen, source, sourceLen, level)
+function zng_gzdirect(file::gzFile)
+    ccall((:zng_gzdirect, ZlibNG_jll.libzng_path), Int32, (gzFile,), file)
 end
 
-function compressBound(sourceLen::uLong)
-    ccall((:compressBound, Zlib_jll.libz_path), uLong, (uLong,), sourceLen)
+function zng_gzclose(file::gzFile)
+    ccall((:zng_gzclose, ZlibNG_jll.libzng_path), Int32, (gzFile,), file)
 end
 
-function uncompress(dest, destLen, source, sourceLen::uLong)
-    ccall((:uncompress, Zlib_jll.libz_path), Cint, (Ptr{Bytef}, Ptr{uLongf}, Ptr{Bytef}, uLong), dest, destLen, source, sourceLen)
+function zng_gzclose_r(file::gzFile)
+    ccall((:zng_gzclose_r, ZlibNG_jll.libzng_path), Int32, (gzFile,), file)
 end
 
-function uncompress2(dest, destLen, source, sourceLen)
-    ccall((:uncompress2, Zlib_jll.libz_path), Cint, (Ptr{Bytef}, Ptr{uLongf}, Ptr{Bytef}, Ptr{uLong}), dest, destLen, source, sourceLen)
+function zng_gzclose_w(file::gzFile)
+    ccall((:zng_gzclose_w, ZlibNG_jll.libzng_path), Int32, (gzFile,), file)
 end
 
-function gzdopen(fd::Cint, mode)
-    ccall((:gzdopen, Zlib_jll.libz_path), gzFile, (Cint, Ptr{Cchar}), fd, mode)
+function zng_gzerror(file::gzFile, errnum)
+    ccall((:zng_gzerror, ZlibNG_jll.libzng_path), Ptr{Cchar}, (gzFile, Ptr{Int32}), file, errnum)
 end
 
-function gzbuffer(file::gzFile, size::Cuint)
-    ccall((:gzbuffer, Zlib_jll.libz_path), Cint, (gzFile, Cuint), file, size)
+function zng_gzclearerr(file::gzFile)
+    ccall((:zng_gzclearerr, ZlibNG_jll.libzng_path), Cvoid, (gzFile,), file)
 end
 
-function gzsetparams(file::gzFile, level::Cint, strategy::Cint)
-    ccall((:gzsetparams, Zlib_jll.libz_path), Cint, (gzFile, Cint, Cint), file, level, strategy)
+function zng_adler32(adler::UInt32, buf, len::UInt32)
+    ccall((:zng_adler32, ZlibNG_jll.libzng_path), UInt32, (UInt32, Ptr{UInt8}, UInt32), adler, buf, len)
 end
 
-function gzread(file::gzFile, buf::voidp, len::Cuint)
-    ccall((:gzread, Zlib_jll.libz_path), Cint, (gzFile, voidp, Cuint), file, buf, len)
+function zng_adler32_z(adler::UInt32, buf, len::Csize_t)
+    ccall((:zng_adler32_z, ZlibNG_jll.libzng_path), UInt32, (UInt32, Ptr{UInt8}, Csize_t), adler, buf, len)
 end
 
-function gzfread(buf::voidp, size::z_size_t, nitems::z_size_t, file::gzFile)
-    ccall((:gzfread, Zlib_jll.libz_path), z_size_t, (voidp, z_size_t, z_size_t, gzFile), buf, size, nitems, file)
+function zng_adler32_combine(adler1::UInt32, adler2::UInt32, len2::off_t)
+    ccall((:zng_adler32_combine, ZlibNG_jll.libzng_path), UInt32, (UInt32, UInt32, off_t), adler1, adler2, len2)
 end
 
-function gzwrite(file::gzFile, buf::voidpc, len::Cuint)
-    ccall((:gzwrite, Zlib_jll.libz_path), Cint, (gzFile, voidpc, Cuint), file, buf, len)
+function zng_crc32(crc::UInt32, buf, len::UInt32)
+    ccall((:zng_crc32, ZlibNG_jll.libzng_path), UInt32, (UInt32, Ptr{UInt8}, UInt32), crc, buf, len)
 end
 
-function gzfwrite(buf::voidpc, size::z_size_t, nitems::z_size_t, file::gzFile)
-    ccall((:gzfwrite, Zlib_jll.libz_path), z_size_t, (voidpc, z_size_t, z_size_t, gzFile), buf, size, nitems, file)
+function zng_crc32_z(crc::UInt32, buf, len::Csize_t)
+    ccall((:zng_crc32_z, ZlibNG_jll.libzng_path), UInt32, (UInt32, Ptr{UInt8}, Csize_t), crc, buf, len)
 end
 
-function gzputs(file::gzFile, s)
-    ccall((:gzputs, Zlib_jll.libz_path), Cint, (gzFile, Ptr{Cchar}), file, s)
+function zng_crc32_combine(crc1::UInt32, crc2::UInt32, len2::off_t)
+    ccall((:zng_crc32_combine, ZlibNG_jll.libzng_path), UInt32, (UInt32, UInt32, off_t), crc1, crc2, len2)
 end
 
-function gzgets(file::gzFile, buf, len::Cint)
-    ccall((:gzgets, Zlib_jll.libz_path), Ptr{Cchar}, (gzFile, Ptr{Cchar}, Cint), file, buf, len)
+function zng_crc32_combine_gen(len2::off_t)
+    ccall((:zng_crc32_combine_gen, ZlibNG_jll.libzng_path), UInt32, (off_t,), len2)
 end
 
-function gzputc(file::gzFile, c::Cint)
-    ccall((:gzputc, Zlib_jll.libz_path), Cint, (gzFile, Cint), file, c)
+function zng_crc32_combine_op(crc1::UInt32, crc2::UInt32, op::UInt32)
+    ccall((:zng_crc32_combine_op, ZlibNG_jll.libzng_path), UInt32, (UInt32, UInt32, UInt32), crc1, crc2, op)
 end
 
-function gzungetc(c::Cint, file::gzFile)
-    ccall((:gzungetc, Zlib_jll.libz_path), Cint, (Cint, gzFile), c, file)
+@enum zng_deflate_param::UInt32 begin
+    Z_DEFLATE_LEVEL = 0
+    Z_DEFLATE_STRATEGY = 1
+    Z_DEFLATE_REPRODUCIBLE = 2
 end
 
-function gzflush(file::gzFile, flush::Cint)
-    ccall((:gzflush, Zlib_jll.libz_path), Cint, (gzFile, Cint), file, flush)
+struct zng_deflate_param_value
+    param::zng_deflate_param
+    buf::Ptr{Cvoid}
+    size::Csize_t
+    status::Int32
 end
 
-function gzrewind(file::gzFile)
-    ccall((:gzrewind, Zlib_jll.libz_path), Cint, (gzFile,), file)
+function zng_deflateSetParams(strm, params, count::Csize_t)
+    ccall((:zng_deflateSetParams, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{zng_deflate_param_value}, Csize_t), strm, params, count)
 end
 
-function gzeof(file::gzFile)
-    ccall((:gzeof, Zlib_jll.libz_path), Cint, (gzFile,), file)
+function zng_deflateGetParams(strm, params, count::Csize_t)
+    ccall((:zng_deflateGetParams, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Ptr{zng_deflate_param_value}, Csize_t), strm, params, count)
 end
 
-function gzdirect(file::gzFile)
-    ccall((:gzdirect, Zlib_jll.libz_path), Cint, (gzFile,), file)
+function zng_zError(arg1::Int32)
+    ccall((:zng_zError, ZlibNG_jll.libzng_path), Ptr{Cchar}, (Int32,), arg1)
 end
 
-function gzclose(file::gzFile)
-    ccall((:gzclose, Zlib_jll.libz_path), Cint, (gzFile,), file)
+function zng_inflateSyncPoint(arg1)
+    ccall((:zng_inflateSyncPoint, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), arg1)
 end
 
-function gzclose_r(file::gzFile)
-    ccall((:gzclose_r, Zlib_jll.libz_path), Cint, (gzFile,), file)
+function zng_get_crc_table()
+    ccall((:zng_get_crc_table, ZlibNG_jll.libzng_path), Ptr{UInt32}, ())
 end
 
-function gzclose_w(file::gzFile)
-    ccall((:gzclose_w, Zlib_jll.libz_path), Cint, (gzFile,), file)
+function zng_inflateUndermine(arg1, arg2::Int32)
+    ccall((:zng_inflateUndermine, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32), arg1, arg2)
 end
 
-function gzerror(file::gzFile, errnum)
-    ccall((:gzerror, Zlib_jll.libz_path), Ptr{Cchar}, (gzFile, Ptr{Cint}), file, errnum)
+function zng_inflateValidate(arg1, arg2::Int32)
+    ccall((:zng_inflateValidate, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream}, Int32), arg1, arg2)
 end
 
-function gzclearerr(file::gzFile)
-    ccall((:gzclearerr, Zlib_jll.libz_path), Cvoid, (gzFile,), file)
+function zng_inflateCodesUsed(arg1)
+    ccall((:zng_inflateCodesUsed, ZlibNG_jll.libzng_path), Culong, (Ptr{zng_stream},), arg1)
 end
 
-function adler32(adler::uLong, buf, len::uInt)
-    ccall((:adler32, Zlib_jll.libz_path), uLong, (uLong, Ptr{Bytef}, uInt), adler, buf, len)
+function zng_inflateResetKeep(arg1)
+    ccall((:zng_inflateResetKeep, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), arg1)
 end
 
-function adler32_z(adler::uLong, buf, len::z_size_t)
-    ccall((:adler32_z, Zlib_jll.libz_path), uLong, (uLong, Ptr{Bytef}, z_size_t), adler, buf, len)
+function zng_deflateResetKeep(arg1)
+    ccall((:zng_deflateResetKeep, ZlibNG_jll.libzng_path), Int32, (Ptr{zng_stream},), arg1)
 end
 
-function crc32(crc::uLong, buf, len::uInt)
-    ccall((:crc32, Zlib_jll.libz_path), uLong, (uLong, Ptr{Bytef}, uInt), crc, buf, len)
-end
+const Byte = Cuchar
 
-function crc32_z(crc::uLong, buf, len::z_size_t)
-    ccall((:crc32_z, Zlib_jll.libz_path), uLong, (uLong, Ptr{Bytef}, z_size_t), crc, buf, len)
-end
+const Bytef = Byte
 
-function crc32_combine_op(crc1::uLong, crc2::uLong, op::uLong)
-    ccall((:crc32_combine_op, Zlib_jll.libz_path), uLong, (uLong, uLong, uLong), crc1, crc2, op)
-end
+const uInt = Cuint
 
-function gzgetc_(file::gzFile)
-    ccall((:gzgetc_, Zlib_jll.libz_path), Cint, (gzFile,), file)
-end
+const uLong = Culong
 
-function zError(arg1::Cint)
-    ccall((:zError, Zlib_jll.libz_path), Ptr{Cchar}, (Cint,), arg1)
-end
+const charf = Cchar
 
-function inflateSyncPoint(arg1::z_streamp)
-    ccall((:inflateSyncPoint, Zlib_jll.libz_path), Cint, (z_streamp,), arg1)
-end
+const intf = Cint
 
-function get_crc_table()
-    ccall((:get_crc_table, Zlib_jll.libz_path), Ptr{z_crc_t}, ())
-end
+const uIntf = uInt
 
-function inflateUndermine(arg1::z_streamp, arg2::Cint)
-    ccall((:inflateUndermine, Zlib_jll.libz_path), Cint, (z_streamp, Cint), arg1, arg2)
-end
+const uLongf = uLong
 
-function inflateValidate(arg1::z_streamp, arg2::Cint)
-    ccall((:inflateValidate, Zlib_jll.libz_path), Cint, (z_streamp, Cint), arg1, arg2)
-end
+const voidpc = Ptr{Cvoid}
 
-function inflateCodesUsed(arg1::z_streamp)
-    ccall((:inflateCodesUsed, Zlib_jll.libz_path), Culong, (z_streamp,), arg1)
-end
+const voidpf = Ptr{Cvoid}
 
-function inflateResetKeep(arg1::z_streamp)
-    ccall((:inflateResetKeep, Zlib_jll.libz_path), Cint, (z_streamp,), arg1)
-end
+const voidp = Ptr{Cvoid}
 
-function deflateResetKeep(arg1::z_streamp)
-    ccall((:deflateResetKeep, Zlib_jll.libz_path), Cint, (z_streamp,), arg1)
-end
+const ZLIBNG_VERSION = "2.1.0.devel"
 
-const ZLIB_VERSION = "1.2.13"
+const ZLIBNG_VERNUM = Clong(0x02010000)
 
-const ZLIB_VERNUM = 0x12d0
+const ZLIBNG_VER_MAJOR = 2
 
-const ZLIB_VER_MAJOR = 1
+const ZLIBNG_VER_MINOR = 1
 
-const ZLIB_VER_MINOR = 2
+const ZLIBNG_VER_REVISION = 0
 
-const ZLIB_VER_REVISION = 13
+const ZLIBNG_VER_STATUS = 0
 
-const ZLIB_VER_SUBREVISION = 0
+const ZLIBNG_VER_MODIFIED = 0
 
 const Z_NO_FLUSH = 0
 
@@ -474,26 +495,20 @@ const Z_UNKNOWN = 2
 
 const Z_DEFLATED = 8
 
-const Z_NULL = 0
+# Skipping MacroDefinition: z_const const
 
-const zlib_version = zlibVersion()
+const MAX_MEM_LEVEL = 9
 
-const gzopen = gzopen64
+const MAX_WBITS = 15
 
-const gzseek = gzseek64
+# Skipping MacroDefinition: Z_EXTERN extern
 
-const gztell = gztell64
+const z_off_t = off_t
 
-const gzoffset = gzoffset64
-
-const adler32_combine = adler32_combine64
-
-const crc32_combine = crc32_combine64
-
-const crc32_combine_gen = crc32_combine_gen64
+const z_off64_t = z_off_t
 
 # exports
-const PREFIXES = ["Z_"]
+const PREFIXES = ["Z_", "ZNG_"]
 for name in names(@__MODULE__; all=true), prefix in PREFIXES
     if startswith(string(name), prefix)
         @eval export $name
