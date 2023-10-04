@@ -57,7 +57,7 @@ else
 end
 
 # Zlib errors as Exceptions
-zerror(e::Integer) = unsafe_string(zError(e))
+zerror(e::Integer) = unsafe_string(Zlib_h.zError(e))
 mutable struct ZError <: Exception
     err::Cint
     err_str::AbstractString
