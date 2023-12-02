@@ -9,6 +9,10 @@ Zlib_jll = "83775a58-1f1d-513f-b197-d71354ab007a"
 
 [compat]
 julia = "1.9"
+Libdl = "1.0"
+Zlib_jll = "1.0" 
+Aqua = "0.8"
+Test = "1.0"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
