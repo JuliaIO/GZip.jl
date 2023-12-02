@@ -189,7 +189,7 @@ function gzopen(fname::AbstractString, gzmode::AbstractString, gz_buf_size::Inte
 
     gz_file = Zlib_h.gzopen(fname, gzmode)
     if gz_file == C_NULL
-        errno = unsafe_load(cglobal((:errno, :libc), Cint))
+        errno = Libc.errno()
         throw(SystemError("$(fname)", errno))
     end
     if gz_buf_size != Z_DEFAULT_BUFSIZE
@@ -236,7 +236,7 @@ function gzdopen(name::AbstractString, fd::Integer, gzmode::AbstractString, gz_b
 
     gz_file = Zlib_h.gzdopen(reinterpret(Cint, dup_fd), gzmode)
     if gz_file == C_NULL
-        errno = unsafe_load(cglobal((:errno, :libc), Cint))
+        errno = Libc.errno()
         throw(SystemError("$(name)", errno))
     end
     if gz_buf_size != Z_DEFAULT_BUFSIZE
