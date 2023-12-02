@@ -52,6 +52,9 @@ try
     @test data == data3
 
     # Test gzfdio
+    @test_throws "No such file or directory" gzopen("wrong_file.gz", "r")
+    @test_throws "Bad file descriptor" gzdopen("wrong_fd.gz", -1, "r", 1024)
+
     raw_file = open(test_compressed, "r")
     gzfile = gzdopen(fd(raw_file), "r")
     data4 = read(gzfile, String)
