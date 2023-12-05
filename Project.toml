@@ -1,7 +1,7 @@
 name = "GZip"
 uuid = "92fee26a-97fe-5a0c-ad85-20a5f3185b63"
 authors = ["staticfloat@gmail.com <staticfloat@gmail.com>"]
-version = "0.6.1"
+version = "0.6.2"
 
 [deps]
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
