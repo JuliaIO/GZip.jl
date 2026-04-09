@@ -8,8 +8,9 @@ This module provides a wrapper for the gzip related functions of
 unencumbered, lossless data-compression library. These functions allow
 the reading and writing of gzip files.
 
-Supports both standard zlib (default) and zlib-ng backends. Use
-`backend=GZip.ZLIBNG` when opening files to use the zlib-ng backend.
+Defaults to the [zlib-ng](https://github.com/zlib-ng/zlib-ng) backend for
+faster compression and decompression. Use `backend=GZip.ZLIB` to use standard
+zlib instead. Files are cross-compatible between backends.
 
 ## Notes
 
@@ -38,6 +39,10 @@ following `IO`/`IOStream` functions are supported:
 -   `readline()`
 -   `write()`
 -   `peek()`
+-   `isreadable()`
+-   `iswritable()`
+
+[`gzheader`](@ref) reads gzip header metadata without decompressing.
 
 Due to limitations in `zlib`, `seekend` and `truncate` are not available.
 """

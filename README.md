@@ -36,23 +36,13 @@ end
 
 Files are cross-compatible between backends.
 
-## GZip.jl vs CodecZlib.jl
-
-Both packages use zlib under the hood but serve different use cases:
-
-| | GZip.jl | CodecZlib.jl |
-|:---|:---|:---|
-| **Best for** | File-based gzip I/O | In-memory compression, streaming pipelines |
-| **API style** | Drop-in `IO` replacement (`read`, `write`, `seek`) | TranscodingStreams (`transcode`, composable codecs) |
-| **zlib-ng support** | Yes (default backend) | No |
-| **Seeking** | Yes | No |
-| **In-memory compress/decompress** | No | Yes (`transcode`) |
-| **Raw deflate/zlib format** | No (gzip only) | Yes |
-| **Header metadata** | Yes (`gzheader`) | No |
+## When to use GZip.jl
 
 **Use GZip.jl** when you need file-oriented gzip I/O with seeking, zlib-ng performance, or header metadata access.
 
-**Use [ChunkCodecLibZlib.jl](https://github.com/JuliaIO/ChunkCodecs.jl/tree/main/LibZlib)** when you need one-shot in-memory compression with configurable compression level and output size hints.
+**Use [ChunkCodecLibZlib.jl](https://github.com/JuliaIO/ChunkCodecs.jl/tree/main/LibZlib)** for one-shot in-memory compression with configurable compression level and output size hints.
+
+**Use [CodecZlib.jl](https://github.com/JuliaIO/CodecZlib.jl)** for composable streaming pipelines, raw deflate/zlib formats, or TranscodingStreams integration.
 
 ## Documentation
 
