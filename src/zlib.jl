@@ -10,7 +10,7 @@ using .Zlib_h: Z_OK, Z_STREAM_END, Z_NEED_DICT, Z_ERRNO, Z_STREAM_ERROR,
                Z_SYNC_FLUSH
 using .ZlibNG_h
 
-const GZLIB_VERSION = unsafe_string(Zlib_h.zlib_version)
+const GZLIB_VERSION = Zlib_h.zlib_version
 const ZLIB_VERSION  = let ver = GZLIB_VERSION
     # zlib-ng uses format like "1.3.1.zlib-ng" — strip the suffix
     ver = replace(ver, r"\.?zlib-ng$" => "")

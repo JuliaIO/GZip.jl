@@ -108,7 +108,11 @@ function zError(arg1::Cint)
     ccall((:zError, Zlib_jll.libz_path), Ptr{Cchar}, (Cint,), arg1)
 end
 
-const zlib_version = zlibVersion()
+# NOTE: must be a String, not the Ptr that zlibVersion() returns. A const is
+# evaluated during precompilation and serialized into the cache file, so a
+# stored pointer refers to the *precompiling* process's address space and
+# dereferencing it in a later session segfaults.
+const zlib_version = unsafe_string(zlibVersion())
 
 # Z_* constants
 const Z_OK = Cint(0)
