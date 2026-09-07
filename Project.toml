@@ -1,7 +1,7 @@
 name = "GZip"
 uuid = "92fee26a-97fe-5a0c-ad85-20a5f3185b63"
 authors = ["staticfloat@gmail.com <staticfloat@gmail.com>", "Viral B. Shah <viral@mayin.org>"]
-version = "0.7.1"
+version = "0.8.0"
 
 [deps]
 Zlib_jll = "83775a58-1f1d-513f-b197-d71354ab007a"
