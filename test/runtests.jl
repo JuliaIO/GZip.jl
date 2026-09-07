@@ -724,5 +724,106 @@ end
 end
 
 
+# Line-oriented reading must agree with IOStream, byte for byte, on the
+# awkward cases: no trailing newline, CRLF, lines that end exactly on the
+# 256-byte gzgets buffer boundary, and lines longer than the buffer.
+@testset "readline/readuntil match IOStream" begin
+    tmp = mktempdir()
+    try
+        cases = String[
+            "", "\n", "a", "a\n", "a\nb", "a\nb\n", "\n\n\n",
+            "abc\r\ndef\r\n",
+            repeat("x", 254) * "\n" * "y\n",
+            repeat("x", 255) * "\n" * "y\n",   # line ends exactly at GZ_LINE_BUFSIZE
+            repeat("x", 256) * "\n" * "y\n",
+            repeat("x", 255),                  # ...and again with no trailing newline
+            repeat("x", 100_000) * "\n" * "tail\n",  # forces buffer growth
+        ]
+        for (i, txt) in enumerate(cases)
+            plain = joinpath(tmp, "c$i.txt")
+            gz = joinpath(tmp, "c$i.gz")
+            write(plain, txt)
+            gzopen(gz, "w") do io
+                write(io, txt)
+            end
+
+            for keep in (false, true)
+                readall(f) = (Base.open(f, plain), gzopen(f, gz))
+                a, b = readall(io -> (r = String[]; while !eof(io); push!(r, readline(io; keep)); end; r))
+                @test a == b
+                a, b = readall(io -> (r = String[]; while !eof(io); push!(r, readuntil(io, '\n'; keep)); end; r))
+                @test a == b
+                a, b = readall(io -> (r = Any[]; while !eof(io); push!(r, readuntil(io, UInt8(','); keep)); end; r))
+                @test a == b
+            end
+
+            for f in (io -> collect(eachline(io)), readlines, read,
+                      io -> (v = UInt8[]; while !eof(io); push!(v, read(io, UInt8)); end; v),
+                      io -> (v = UInt8[]; while !eof(io); peek(io); push!(v, read(io, UInt8)); end; v),
+                      io -> (r = Any[]; while !eof(io); push!(r, readuntil(io, 'x')); end; r))
+                @test Base.open(f, plain) == gzopen(f, gz)
+            end
+        end
+    finally
+        rm(tmp, recursive=true)
+    end
+end
+
+# eof() must become true as soon as the last byte is consumed, otherwise
+# `while !eof(io); readline(io); end` yields a spurious trailing "".
+@testset "eof after last byte" begin
+    tmp = mktempdir()
+    try
+        fn = joinpath(tmp, "lines.gz")
+        gzopen(fn, "w") do io
+            write(io, "a\nb\nc\n")
+        end
+        n = gzopen(fn) do io
+            c = 0
+            while !eof(io)
+                readline(io)
+                c += 1
+            end
+            c
+        end
+        @test n == 3
+
+        gzopen(fn) do io
+            @test read(io, UInt8) == UInt8('a')
+            @test !eof(io)
+            for _ in 1:5
+                read(io, UInt8)
+            end
+            @test eof(io)
+            @test_throws EOFError read(io, UInt8)
+        end
+    finally
+        rm(tmp, recursive=true)
+    end
+end
+
+# The scratch buffer used by readline is per-stream and reused across calls;
+# interleaving two streams must not let one clobber the other.
+@testset "readline buffer reuse across streams" begin
+    tmp = mktempdir()
+    try
+        f1 = joinpath(tmp, "1.gz"); f2 = joinpath(tmp, "2.gz")
+        gzopen(f1, "w") do io; write(io, "aaa\nbbb\n"); end
+        gzopen(f2, "w") do io; write(io, repeat("z", 500) * "\nccc\n"); end
+        io1 = gzopen(f1); io2 = gzopen(f2)
+        try
+            @test readline(io1) == "aaa"
+            @test readline(io2) == repeat("z", 500)
+            @test readline(io1) == "bbb"
+            @test readline(io2) == "ccc"
+        finally
+            close(io1); close(io2)
+        end
+    finally
+        rm(tmp, recursive=true)
+    end
+end
+
+
 using Aqua
 Aqua.test_all(GZip)

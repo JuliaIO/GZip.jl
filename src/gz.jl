@@ -1,6 +1,9 @@
 # Expected line length for strings
 const GZ_LINE_BUFSIZE = 256
 
+# Copy n bytes out of a reusable scratch buffer into a String (one allocation)
+_str(buf::Vector{UInt8}, n::Integer) = n <= 0 ? "" : GC.@preserve buf unsafe_string(pointer(buf), n)
+
 # Constants for use with gzseek
 const SEEK_SET =  Cint(0)
 const SEEK_CUR =  Cint(1)
@@ -21,9 +24,10 @@ mutable struct GZipStream{B<:GZBackend} <: IO
     backend::B
     _closed::Bool
     _write::Bool
+    _linebuf::Vector{UInt8}   # reusable scratch for readline/readuntil
 
     function GZipStream(name::AbstractString, gz_file::GZFile, buf_size::Int, backend::B, write::Bool=false) where {B<:GZBackend}
-        x = new{B}(String(name), gz_file, buf_size, backend, false, write)
+        x = new{B}(String(name), gz_file, buf_size, backend, false, write, UInt8[])
         finalizer(close, x)
         x
     end
@@ -31,14 +35,22 @@ end
 
 # gzerror
 function gzerror(err::Integer, s::GZipStream)
-    e = Cint[err]
+    e = Ref{Cint}(err)
     if !s._closed
         msg_p = gz_error(s.backend, s.gz_file, e)
         msg = (msg_p == C_NULL ? "" : unsafe_string(msg_p))
     else
         msg = "(GZipStream closed)"
     end
-    (e[1], msg)
+    (e[], msg)
+end
+
+# Error code only -- no message string built (hot path)
+function _gzerrnum(s::GZipStream)
+    s._closed && return Z_STREAM_ERROR
+    e = Ref{Cint}(Z_OK)
+    gz_error(s.backend, s.gz_file, e)
+    e[]
 end
 gzerror(s::GZipStream) = gzerror(0, s)
 
@@ -178,9 +190,9 @@ function gzread(s::GZipStream, p::Ptr, len::Integer)
     ret = gz_fread(s.backend, reinterpret(Ptr{Cvoid}, p), Csize_t(1), Csize_t(len), s.gz_file)
     # gzfread returns short count on both EOF and error; check gzerror to distinguish
     if ret < len
-        err, msg = gzerror(s)
+        err = _gzerrnum(s)
         if err != Z_OK && err != Z_STREAM_END
-            throw(GZError(err, msg))
+            throw(GZError(err, s))
         end
     end
     Int(ret)
@@ -351,7 +363,15 @@ end
 
 position(s::GZipStream, raw::Bool=false) = raw ? gz_offset(s.backend, s.gz_file) : gz_tell(s.backend, s.gz_file)
 
-eof(s::GZipStream) = Bool(gz_eof(s.backend, s.gz_file))
+function eof(s::GZipStream)
+    s._closed && return true
+    Bool(gz_eof(s.backend, s.gz_file)) && return true
+    s._write && return false
+    # Bytes still in zlib's output buffer => definitely not at eof (no C call).
+    bytesavailable(s) > 0 && return false
+    # Buffer drained: force zlib to try one more byte so its eof bit gets set.
+    _peek(s) == -1
+end
 
 function peek(s::GZipStream, ::Type{UInt8})
     s._closed && throw(EOFError())
@@ -383,7 +403,6 @@ end
 
 function read(s::GZipStream, ::Type{UInt8})
     ret = gzgetc(s)  # throws EOFError or GZError on failure
-    _peek(s) # force eof to be set
     UInt8(ret)
 end
 
@@ -404,8 +423,15 @@ function read(s::GZipStream; bufsize::Int = Z_BIG_BUFSIZE)
     end
 end
 
-function readline(s::GZipStream; keep::Bool=false)
-    buf = Array{UInt8}(undef, GZ_LINE_BUFSIZE)
+readline(s::GZipStream; keep::Bool=false) = _readline(s, keep, true)
+
+# strip_cr: readline() drops a trailing "\r\n"; readuntil(io, '\n') drops only the '\n'.
+function _readline(s::GZipStream, keep::Bool, strip_cr::Bool)
+    buf = s._linebuf
+    # Reuse the scratch buffer, but don't let one huge line pin memory forever.
+    if length(buf) < GZ_LINE_BUFSIZE || length(buf) > 65536
+        resize!(buf, GZ_LINE_BUFSIZE)
+    end
     pos = 1
 
     if gzgets(s, buf) == C_NULL      # Throws an exception on error
@@ -414,36 +440,58 @@ function readline(s::GZipStream; keep::Bool=false)
 
     while(true)
         # since gzgets didn't return C_NULL, there must be a \0 in the buffer
-        eos = findnext(x->x==UInt8('\0'), buf, pos)::Int
+        eos = findnext(==(UInt8('\0')), buf, pos)::Int
         if eos == 1 || buf[eos-1] == UInt8('\n')
             endpos = eos - 1
             if !keep && endpos >= 1 && buf[endpos] == UInt8('\n')
                 endpos -= 1
-                if endpos >= 1 && buf[endpos] == UInt8('\r')
+                if strip_cr && endpos >= 1 && buf[endpos] == UInt8('\r')
                     endpos -= 1
                 end
             end
-            return String(copy(resize!(buf, endpos)))
+            return _str(buf, endpos)
         end
 
         # If we're at the end of the file, return the string
         if eof(s)
-            return String(copy(resize!(buf, eos-1)))
+            return _str(buf, eos-1)
         end
 
         # Otherwise, append to the end of the previous buffer
 
         # Grow the buffer so that there's room for GZ_LINE_BUFSIZE chars
-        add_len = GZ_LINE_BUFSIZE - (length(buf)-eos+1)
-        resize!(buf, add_len+length(buf))
+        chunk = max(GZ_LINE_BUFSIZE, length(buf))
+        add_len = chunk - (length(buf)-eos+1)
+        add_len > 0 && resize!(buf, add_len+length(buf))
         pos = eos
 
         # Read in the next chunk
-        if gzgets(s, pointer(buf)+pos-1, GZ_LINE_BUFSIZE) == C_NULL
-            # eof(s); remove extra buffer space
-            return String(copy(resize!(buf, length(buf)-add_len)))
+        if gzgets(s, pointer(buf)+pos-1, chunk) == C_NULL
+            # eof(s); nothing was appended
+            return _str(buf, pos-1)
         end
     end
+end
+
+function Base.readuntil(s::GZipStream, delim::UInt8; keep::Bool=false)
+    out = UInt8[]
+    while true
+        c = gzgetc_raw(s)
+        c == -1 && break
+        b = UInt8(c)
+        if b == delim
+            keep && push!(out, b)
+            break
+        end
+        push!(out, b)
+    end
+    out
+end
+
+function Base.readuntil(s::GZipStream, delim::AbstractChar; keep::Bool=false)
+    delim == '\n' && return _readline(s, keep, false)   # gzgets fast path
+    isascii(delim) && return String(readuntil(s, UInt8(delim); keep))
+    invoke(Base.readuntil, Tuple{IO,AbstractChar}, s, delim; keep)
 end
 
 write(s::GZipStream, b::UInt8) = (gzputc(s, b); 1)
