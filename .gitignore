@@ -2,3 +2,4 @@ _*
 *.pyc
 Manifest.toml
 test/data/
+docs/build/

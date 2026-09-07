@@ -10,12 +10,54 @@ using .Zlib_h: Z_OK, Z_STREAM_END, Z_NEED_DICT, Z_ERRNO, Z_STREAM_ERROR,
                Z_SYNC_FLUSH
 using .ZlibNG_h
 
-const GZLIB_VERSION = Zlib_h.zlib_version
-const ZLIB_VERSION  = let ver = GZLIB_VERSION
-    # zlib-ng uses format like "1.3.1.zlib-ng" — strip the suffix
-    ver = replace(ver, r"\.?zlib-ng$" => "")
-    tuple([parse(Int, c) for c in split(ver, '.')]...)
+# Version strings are normally "1.2.13", but a build may append a
+# non-numeric component (zlib-ng's zlib-compat mode reports "1.3.1.zlib-ng"),
+# so keep only the leading numeric parts.
+function _version_tuple(ver::AbstractString)
+    parts = Int[]
+    for c in split(ver, '.')
+        n = tryparse(Int, c)
+        n === nothing && break
+        push!(parts, n)
+    end
+    tuple(parts...)
 end
+
+"""
+    GZLIB_VERSION
+
+Version string of the zlib library in use, e.g. `"1.2.13"`.
+
+This describes the [`ZLIB`](@ref) backend only. For the version behind the
+default zlib-ng backend see [`GZLIBNG_VERSION`](@ref), or use
+[`libversion`](@ref) to ask a particular backend or stream.
+"""
+const GZLIB_VERSION = Zlib_h.zlib_version
+
+"""
+    GZLIBNG_VERSION
+
+Version string of the zlib-ng library in use, e.g. `"2.3.3"`.
+
+zlib-ng carries its own version series, unrelated to zlib's; the default
+[`ZLIBNG`](@ref) backend is the one this describes.
+"""
+const GZLIBNG_VERSION = unsafe_string(ZlibNG_h.zlibng_version())
+
+"""
+    ZLIB_VERSION
+
+Version of the zlib library as a tuple of integers, e.g. `(1, 2, 13)`,
+for comparisons such as `ZLIB_VERSION >= (1, 2, 4)`.
+"""
+const ZLIB_VERSION = _version_tuple(GZLIB_VERSION)
+
+"""
+    ZLIBNG_VERSION
+
+Version of the zlib-ng library as a tuple of integers, e.g. `(2, 3, 3)`.
+"""
+const ZLIBNG_VERSION = _version_tuple(GZLIBNG_VERSION)
 
 # Constants for use with gzbuffer
 const Z_DEFAULT_BUFSIZE = 8192
@@ -75,6 +117,21 @@ const ZLIB = ZlibBackend()
 The default zlib-ng backend. Pass as `backend=GZip.ZLIBNG` to `gzopen`/`gzdopen`.
 """
 const ZLIBNG = ZlibNGBackend()
+
+"""
+    libversion(backend::GZBackend) -> String
+    libversion(s::GZipStream) -> String
+
+Version string of the compression library behind `backend`, or behind the
+backend `s` was opened with.
+
+```jldoctest
+julia> GZip.libversion(GZip.ZLIBNG) == GZip.GZLIBNG_VERSION
+true
+```
+"""
+libversion(::ZlibBackend) = GZLIB_VERSION
+libversion(::ZlibNGBackend) = GZLIBNG_VERSION
 
 # Use Ptr{Nothing} as the unified gzFile type to avoid coupling to either wrapper module
 const GZFile = Ptr{Nothing}
