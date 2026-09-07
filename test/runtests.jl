@@ -514,16 +514,79 @@ end
     end
 end
 
+# The 61-byte gzip file GNU gzip produces for a file named "testfile.txt"
+# containing "Hello from a real gzip file\n". Kept as a literal rather than a
+# checked-in .gz so the repo carries no binary fixtures, while still testing
+# our parser against bytes emitted by an independent implementation.
+const GNU_GZIP_FIXTURE = UInt8[
+    0x1f, 0x8b, 0x08, 0x08, 0x2f, 0xc4, 0xd6, 0x69, 0x00, 0x03, 0x74, 0x65,
+    0x73, 0x74, 0x66, 0x69, 0x6c, 0x65, 0x2e, 0x74, 0x78, 0x74, 0x00, 0xf3,
+    0x48, 0xcd, 0xc9, 0xc9, 0x57, 0x48, 0x2b, 0xca, 0xcf, 0x55, 0x48, 0x54,
+    0x28, 0x4a, 0x4d, 0xcc, 0x51, 0x48, 0xaf, 0xca, 0x2c, 0x50, 0x48, 0xcb,
+    0xcc, 0x49, 0xe5, 0x02, 0x00, 0x11, 0x12, 0xe8, 0x28, 0x1c, 0x00, 0x00,
+    0x00,
+]
+
+zcrc32(data) = ccall((:crc32, GZip.Zlib_h.Zlib_jll.libz_path), Culong,
+                     (Culong, Ptr{UInt8}, Cuint), 0, data, length(data)) % UInt32
+
+"""
+Write a gzip file at `path` holding `content`, with arbitrary RFC 1952 header
+fields. zlib always emits a bare 10-byte header (FLG=0) and gives us no way to
+set FNAME/FCOMMENT/FEXTRA/MTIME, so we let GZip.jl produce the deflate stream
+and trailer, then splice on a header we build ourselves.
+"""
+function write_gz_with_header(path, content; mtime::Integer=0, os::UInt8=0x03,
+                              xfl::UInt8=0x00, name=nothing, comment=nothing,
+                              extra=nothing, fhcrc::Bool=false, ftext::Bool=false)
+    payload = path * ".tmp"
+    gzopen(payload, "w") do io
+        write(io, content)
+    end
+    raw = read(payload)
+    rm(payload)
+    @assert raw[4] == 0x00 "expected zlib to emit a flagless 10-byte header"
+    body = raw[11:end]   # deflate stream + CRC32/ISIZE trailer
+
+    flg = 0x00
+    ftext                && (flg |= 0x01)
+    fhcrc                && (flg |= 0x02)
+    extra   !== nothing  && (flg |= 0x04)
+    name    !== nothing  && (flg |= 0x08)
+    comment !== nothing  && (flg |= 0x10)
+
+    head = IOBuffer()
+    write(head, UInt8[0x1f, 0x8b, 0x08, flg])
+    write(head, htol(UInt32(mtime)))
+    write(head, xfl, os)
+    if extra !== nothing
+        write(head, htol(UInt16(length(extra))))
+        write(head, extra)
+    end
+    name    !== nothing && (write(head, name);    write(head, 0x00))
+    comment !== nothing && (write(head, comment); write(head, 0x00))
+    bytes = take!(head)
+    # FHCRC is the low 16 bits of the CRC-32 over the header up to this point,
+    # and zlib *does* verify it, so it has to be right or the file won't inflate.
+    fhcrc && (bytes = [bytes; reinterpret(UInt8, [htol(UInt16(zcrc32(bytes) & 0xffff))])])
+
+    write(path, [bytes; body])
+    path
+end
+
 @testset "gzheader" begin
     tmp = mktempdir()
     try
-        # Real gzip file created by system gzip (has FNAME and MTIME set)
-        fixture = joinpath(@__DIR__, "testfile.txt.gz")
+        # Bytes from GNU gzip: FNAME and MTIME set, OS = Unix
+        fixture = joinpath(tmp, "testfile.txt.gz")
+        write(fixture, GNU_GZIP_FIXTURE)
         h = gzheader(fixture)
         @test h isa GZipHeader
         @test h.name == "testfile.txt"
         @test h.mtime > 0
         @test h.os == 0x03  # Unix
+        @test h.comment === nothing
+        @test h.extra === nothing
 
         # Content should be readable
         content = gzopen(fixture) do io
@@ -541,10 +604,43 @@ end
         @test h2.name === nothing
         @test h2.mtime == 0
 
+        # Every optional header field, individually and together. The old
+        # checked-in fixture only ever exercised FNAME.
+        cases = [
+            (; name="a.txt"),
+            (; comment="a comment"),
+            (; extra=UInt8[0x01, 0x02, 0x03, 0x04]),
+            (; fhcrc=true),
+            (; ftext=true),
+            (; name="b.txt", comment="c", extra=UInt8[0xaa, 0xbb], fhcrc=true, ftext=true),
+            (; mtime=1_700_000_000, os=0x00, xfl=0x02),
+        ]
+        for (i, kw) in enumerate(cases)
+            fn3 = joinpath(tmp, "hdr$i.gz")
+            write_gz_with_header(fn3, "payload $i"; kw...)
+            h3 = gzheader(fn3)
+            @test h3.name == get(kw, :name, nothing)
+            @test h3.comment == get(kw, :comment, nothing)
+            @test h3.extra == get(kw, :extra, nothing)
+            @test h3.is_text == get(kw, :ftext, false)
+            @test h3.mtime == UInt32(get(kw, :mtime, 0))
+            @test h3.os == get(kw, :os, 0x03)
+            @test h3.xfl == get(kw, :xfl, 0x00)
+            # ...and the file must still be a valid gzip stream
+            @test gzopen(fn3) do io
+                read(io, String)
+            end == "payload $i"
+        end
+
         # Not a gzip file
         nongz = joinpath(tmp, "notgz.txt")
         write(nongz, "plain text")
         @test_throws ArgumentError gzheader(nongz)
+
+        # Truncated header
+        trunc = joinpath(tmp, "trunc.gz")
+        write(trunc, GNU_GZIP_FIXTURE[1:6])
+        @test_throws Exception gzheader(trunc)
     finally
         rm(tmp, recursive=true)
     end
