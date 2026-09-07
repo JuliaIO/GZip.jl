@@ -921,5 +921,56 @@ end
 end
 
 
+@testset "library versions" begin
+    # zlib and zlib-ng carry independent version series
+    @test GZip.GZLIB_VERSION isa String
+    @test GZip.GZLIBNG_VERSION isa String
+    @test !isempty(GZip.GZLIB_VERSION)
+    @test !isempty(GZip.GZLIBNG_VERSION)
+
+    @test GZip.ZLIB_VERSION isa Tuple{Vararg{Int}}
+    @test GZip.ZLIBNG_VERSION isa Tuple{Vararg{Int}}
+    @test !isempty(GZip.ZLIB_VERSION)
+    @test !isempty(GZip.ZLIBNG_VERSION)
+    @test GZip.ZLIB_VERSION >= (1, 2)
+    @test GZip.ZLIBNG_VERSION >= (2,)
+
+    # tuples must agree with the strings they were parsed from
+    @test GZip._version_tuple(GZip.GZLIB_VERSION) == GZip.ZLIB_VERSION
+    @test GZip._version_tuple(GZip.GZLIBNG_VERSION) == GZip.ZLIBNG_VERSION
+
+    @test GZip.libversion(GZip.ZLIB) == GZip.GZLIB_VERSION
+    @test GZip.libversion(GZip.ZLIBNG) == GZip.GZLIBNG_VERSION
+    @test GZip.libversion(GZip.ZLIB) != GZip.libversion(GZip.ZLIBNG)
+
+    # a stream reports the version of the backend it was opened with
+    tmp = mktempdir()
+    try
+        for backend in (GZip.ZLIB, GZip.ZLIBNG)
+            fn = joinpath(tmp, "v.gz")
+            gzopen(fn, "w"; backend) do io
+                write(io, "x")
+                @test GZip.libversion(io) == GZip.libversion(backend)
+            end
+            gzopen(fn; backend) do io
+                @test GZip.libversion(io) == GZip.libversion(backend)
+            end
+        end
+    finally
+        rm(tmp, recursive=true)
+    end
+end
+
+@testset "_version_tuple" begin
+    @test GZip._version_tuple("1.2.13") == (1, 2, 13)
+    @test GZip._version_tuple("2.3.3") == (2, 3, 3)
+    @test GZip._version_tuple("1.2.11.1") == (1, 2, 11, 1)
+    @test GZip._version_tuple("1") == (1,)
+    # non-numeric trailing components are dropped, not an error
+    @test GZip._version_tuple("1.3.1.zlib-ng") == (1, 3, 1)
+    @test GZip._version_tuple("1.2.3-beta") == (1, 2)
+    @test GZip._version_tuple("") == ()
+end
+
 using Aqua
 Aqua.test_all(GZip)

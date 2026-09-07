@@ -327,6 +327,8 @@ gzdopen(fd::RawFD, args...; kwargs...) = gzdopen(Base.cconvert(Cint, fd), args..
 gzdopen(s::IOStream, args...; kwargs...) = gzdopen(fd(s), args...; kwargs...)
 
 
+libversion(s::GZipStream) = libversion(s.backend)
+
 fd(s::GZipStream) = throw(MethodError(fd, (s,)))
 
 function close(s::GZipStream)

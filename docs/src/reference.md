@@ -49,6 +49,16 @@ ZLIBNG
 ZFileOffset
 ```
 
+## Library Versions
+
+```@docs
+libversion
+GZLIB_VERSION
+GZLIBNG_VERSION
+ZLIB_VERSION
+ZLIBNG_VERSION
+```
+
 ## Errors
 
 ```@docs
