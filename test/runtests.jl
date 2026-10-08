@@ -70,7 +70,12 @@ function run_backend_tests(; backend=GZip.ZLIB)
         write(raw_file, zeros(UInt8, 10))
         close(raw_file)
 
-        @test_throws Union{ArgumentError,ZError,GZError} gzopen(x->read(x, String), test_compressed; backend)
+        if backend isa GZip.ZlibBackend && VersionNumber(GZip.libversion(backend)) >= v"1.3.2"
+            # zlib >= 1.3.2 treats a first member that fails before any output as junk
+            @test gzopen(x->read(x, String), test_compressed; backend) == ""
+        else
+            @test_throws Union{ArgumentError,ZError,GZError} gzopen(x->read(x, String), test_compressed; backend)
+        end
     end
 
     @testset "readbytes!" begin
