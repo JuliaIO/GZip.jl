@@ -25,9 +25,12 @@ mutable struct GZipStream{B<:GZBackend} <: IO
     _closed::Bool
     _write::Bool
     _linebuf::Vector{UInt8}   # reusable scratch for readline/readuntil
+    # Error seen by a peek, which zlib >= 1.3.2 clears on the following gzungetc
+    _err::Cint
+    _errmsg::String
 
     function GZipStream(name::AbstractString, gz_file::GZFile, buf_size::Int, backend::B, write::Bool=false) where {B<:GZBackend}
-        x = new{B}(String(name), gz_file, buf_size, backend, false, write, UInt8[])
+        x = new{B}(String(name), gz_file, buf_size, backend, false, write, UInt8[], Z_OK, "")
         finalizer(close, x)
         x
     end
@@ -39,6 +42,7 @@ function gzerror(err::Integer, s::GZipStream)
     if !s._closed
         msg_p = gz_error(s.backend, s.gz_file, e)
         msg = (msg_p == C_NULL ? "" : unsafe_string(msg_p))
+        e[] == Z_OK && s._err != Z_OK && return (s._err, s._errmsg)
     else
         msg = "(GZipStream closed)"
     end
@@ -50,8 +54,20 @@ function _gzerrnum(s::GZipStream)
     s._closed && return Z_STREAM_ERROR
     e = Ref{Cint}(Z_OK)
     gz_error(s.backend, s.gz_file, e)
-    e[]
+    e[] == Z_OK ? s._err : e[]
 end
+
+# zlib >= 1.3.2 resets a non-fatal error (e.g. truncated input) on the next
+# call, so save it before the gzungetc that ends a peek.
+function _save_err(s::GZipStream)
+    e, msg = gzerror(s)
+    if e != Z_OK
+        s._err = e
+        s._errmsg = msg
+    end
+end
+
+_clear_err(s::GZipStream) = (s._err = Z_OK; s._errmsg = "")
 gzerror(s::GZipStream) = gzerror(0, s)
 
 """
@@ -338,6 +354,7 @@ function close(s::GZipStream)
     s._closed = true
 
     ret = (@test_z_ok s gz_close(s.backend, s.gz_file))
+    s._err == Z_BUF_ERROR && throw(ZError(s._err, s.backend))
 
     return ret
 end
@@ -354,12 +371,14 @@ truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, I
 
 # Note: seeks to byte position within uncompressed data stream
 function seek(s::GZipStream, n::Integer)
+    _clear_err(s)
     gz_seek(s.backend, s.gz_file, n, SEEK_SET) != -1 || throw(ArgumentError("seek failed: cannot seek to position $n"))
 end
 
 # Note: skips bytes within uncompressed data stream
 # Mimic behavior of skip(s::IOStream, n)
 function skip(s::GZipStream, n::Integer)
+    _clear_err(s)
     gz_seek(s.backend, s.gz_file, n, SEEK_CUR) != -1 || throw(ArgumentError("skip failed: cannot skip $n bytes"))
 end
 
@@ -379,6 +398,7 @@ function peek(s::GZipStream, ::Type{UInt8})
     s._closed && throw(EOFError())
     c = gzgetc_raw(s)
     c == -1 && throw(EOFError())
+    _save_err(s)
     gzungetc(c, s)
     UInt8(c)
 end
@@ -387,6 +407,7 @@ end
 function _peek(s::GZipStream)
     c = gzgetc_raw(s)
     if c != -1
+        _save_err(s)
         gzungetc(c, s)
     end
     c
