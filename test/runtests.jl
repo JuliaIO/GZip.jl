@@ -428,6 +428,43 @@ function run_backend_tests(; backend=GZip.ZLIB)
                 read(io, String)
             end
         end
+
+        # Larger than zlib's buffer, so truncation is first seen mid-stream
+        # rather than by the peek in gzopen. Every way of reading to the end
+        # must report it, from the read or from close.
+        fn_big = joinpath(tmp, "trunc_big.gz")
+        gzopen(fn_big, "wb"; backend) do io
+            for i in 1:20000
+                println(io, string(hash(i), base=16), ';', i)
+            end
+        end
+        raw = read(fn_big)
+        write(fn_big, raw[1:end-5000])
+        readers = [
+            io -> read(io),
+            io -> while !eof(io); read(io, 1000); end,
+            io -> while length(read(io, 1000)) == 1000; end,
+            io -> (b = Vector{UInt8}(undef, 777); while readbytes!(io, b) == 777; end),
+            io -> while !eof(io); readline(io); end,
+            io -> while !eof(io); readuntil(io, UInt8(';')); end,
+            io -> readuntil(io, '\0'),
+            io -> try while true; read(io, UInt8); end; catch e; e isa EOFError || rethrow(); end,
+            io -> try while true; read(io, UInt64); end; catch e; e isa EOFError || rethrow(); end,
+            io -> (skip(io, 1000); read(io)),
+            io -> (seek(io, 1000); read(io)),
+            io -> while !eof(io); skip(io, 4096); end,
+        ]
+        for reader in readers
+            @test_throws Union{GZError, ZError} gzopen(reader, fn_big; backend)
+        end
+
+        # A backward seek re-reads the file, so it drops a saved error
+        io = gzopen(fn_big; backend)
+        @test_throws GZError read(io)
+        seek(io, 0)
+        @test read(io, 5) == codeunits(string(hash(1), base=16))[1:5]
+        @test_throws GZError read(io)
+        @test_throws ZError close(io)
     end
 
     finally
