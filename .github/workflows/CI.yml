@@ -28,9 +28,13 @@ jobs:
           - macos-latest
         include:
           - os: ubuntu-latest
+            version: '1'
+            arch: x86        
+          - os: ubuntu-latest
             version: 'min'
           - os: ubuntu-latest
             version: 'nightly'
+            
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
