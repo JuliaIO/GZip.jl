@@ -57,14 +57,17 @@ function _gzerrnum(s::GZipStream)
     e[] == Z_OK ? s._err : e[]
 end
 
-# zlib >= 1.3.2 resets a non-fatal error (e.g. truncated input) on the next
-# call, so save it before the gzungetc that ends a peek.
+# zlib >= 1.3.2 resets a non-fatal error (e.g. truncated input) at the start of
+# the next read call, so save it after every call that may have refilled zlib's
+# buffer. No string is built unless there is an error (hot path).
 function _save_err(s::GZipStream)
-    e, msg = gzerror(s)
-    if e != Z_OK
-        s._err = e
-        s._errmsg = msg
+    e = Ref{Cint}(Z_OK)
+    msg_p = gz_error(s.backend, s.gz_file, e)
+    if e[] != Z_OK && e[] != Z_STREAM_END
+        s._err = e[]
+        s._errmsg = (msg_p == C_NULL ? "" : unsafe_string(msg_p))
     end
+    nothing
 end
 
 _clear_err(s::GZipStream) = (s._err = Z_OK; s._errmsg = "")
@@ -151,9 +154,15 @@ end
 
 Read a single byte from the stream. Throws `EOFError` at end of file.
 """
-gzgetc(s::GZipStream) = @test_eof_gzerr(s, gz_getc(s.backend, s.gz_file), -1)
+gzgetc(s::GZipStream) = @test_eof_gzerr(s, gzgetc_raw(s), -1)
 
-gzgetc_raw(s::GZipStream) = gz_getc(s.backend, s.gz_file)
+function gzgetc_raw(s::GZipStream)
+    # Only a call that starts with an empty buffer can hit (and report) an error
+    refill = bytesavailable(s) == 0
+    c = gz_getc(s.backend, s.gz_file)
+    refill && _save_err(s)
+    c
+end
 
 """
     gzungetc(c::Integer, s::GZipStream)
@@ -168,10 +177,16 @@ gzungetc(c::Integer, s::GZipStream) = @test_eof_gzerr(s, gz_ungetc(s.backend, c,
 Read a line from the stream into `buf`, stopping at newline or end of file.
 """
 gzgets(s::GZipStream, a::Array{UInt8}) =
-    @test_eof_gzerr2(s, gz_gets(s.backend, s.gz_file, a, Cint(length(a))), C_NULL)
+    @test_eof_gzerr2(s, _gzgets(s, a, length(a)), C_NULL)
 
 gzgets(s::GZipStream, p::Ptr{UInt8}, len::Integer) =
-    @test_eof_gzerr2(s, gz_gets(s.backend, s.gz_file, p, Cint(len)), C_NULL)
+    @test_eof_gzerr2(s, _gzgets(s, p, len), C_NULL)
+
+function _gzgets(s::GZipStream, buf, len::Integer)
+    ret = gz_gets(s.backend, s.gz_file, buf, Cint(len))
+    _save_err(s)
+    ret
+end
 
 """
     gzputc(s::GZipStream, c::Integer)
@@ -204,6 +219,7 @@ function gzread(s::GZipStream, p::Ptr, len::Integer)
     s._closed && throw(EOFError())
     len == 0 && return Int(0)
     ret = gz_fread(s.backend, reinterpret(Ptr{Cvoid}, p), Csize_t(1), Csize_t(len), s.gz_file)
+    _save_err(s)
     # gzfread returns short count on both EOF and error; check gzerror to distinguish
     if ret < len
         err = _gzerrnum(s)
@@ -371,15 +387,19 @@ truncate(s::GZipStream, n::Integer) = throw(MethodError(truncate, (GZipStream, I
 
 # Note: seeks to byte position within uncompressed data stream
 function seek(s::GZipStream, n::Integer)
-    _clear_err(s)
+    rewinds = n < position(s)
     gz_seek(s.backend, s.gz_file, n, SEEK_SET) != -1 || throw(ArgumentError("seek failed: cannot seek to position $n"))
+    # Only a backward seek rewinds and re-reads the file; a forward one keeps the error
+    rewinds && _clear_err(s)
+    true
 end
 
 # Note: skips bytes within uncompressed data stream
 # Mimic behavior of skip(s::IOStream, n)
 function skip(s::GZipStream, n::Integer)
-    _clear_err(s)
     gz_seek(s.backend, s.gz_file, n, SEEK_CUR) != -1 || throw(ArgumentError("skip failed: cannot skip $n bytes"))
+    n < 0 && _clear_err(s)
+    true
 end
 
 position(s::GZipStream, raw::Bool=false) = raw ? gz_offset(s.backend, s.gz_file) : gz_tell(s.backend, s.gz_file)
@@ -398,7 +418,6 @@ function peek(s::GZipStream, ::Type{UInt8})
     s._closed && throw(EOFError())
     c = gzgetc_raw(s)
     c == -1 && throw(EOFError())
-    _save_err(s)
     gzungetc(c, s)
     UInt8(c)
 end
@@ -407,7 +426,6 @@ end
 function _peek(s::GZipStream)
     c = gzgetc_raw(s)
     if c != -1
-        _save_err(s)
         gzungetc(c, s)
     end
     c
@@ -497,6 +515,7 @@ function _readline(s::GZipStream, keep::Bool, strip_cr::Bool)
 end
 
 function Base.readuntil(s::GZipStream, delim::UInt8; keep::Bool=false)
+    s._closed && throw(EOFError())
     out = UInt8[]
     while true
         c = gzgetc_raw(s)
